@@ -1,0 +1,9 @@
+fastapi==0.95.1
+pydantic==1.10.7
+uvicorn==0.21.1
+strawberry-graphql[fastapi]==0.174.0
+aiosqlite==0.19.0
+sqlalchemy==2.0.11
+strawberry-sqlalchemy-mapper==0.1.1
+psycopg2
+psycopg2-binary

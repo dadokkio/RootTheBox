@@ -78,15 +78,16 @@ class DatabaseConnection(object):
         """
         logging.debug("Configured to use Postgresql for a database")
         try:
-            import pypostgresql
+            import postgresql
         except ImportError:
             print(WARN + "You must install 'pypostgresql'")
             os._exit(1)
-        db_host, db_name, db_user, db_password = self._db_credentials()
-        postgres = "postgresql+pypostgresql://%s:%s@%s/%s" % (
+        db_host, db_port, db_name, db_user, db_password = self._db_credentials()
+        postgres = "postgresql://%s:%s@%s:%d/%s" % (
             db_user,
             db_password,
             db_host,
+            db_port,
             db_name,
         )
         if self._test_connection(postgres):
@@ -122,7 +123,7 @@ class DatabaseConnection(object):
     def _mysql(self):
         """Configure db_connection for MySQL"""
         logging.debug("Configured to use MySQL for a database")
-        db_server, db_name, db_user, db_password = self._db_credentials()
+        db_server, _, db_name, db_user, db_password = self._db_credentials()
         db_charset = "utf8mb4"
         db_connection = "%s:%s@%s/%s?charset=%s" % (
             db_user,
@@ -179,6 +180,7 @@ class DatabaseConnection(object):
         elif self.password == "ENV":
             self.password = os.environ["sql_password"]
         db_host = quote(self.hostname)
+        db_port = self.port
         db_name = quote(self.database)
         db_user = quote(self.username)
         db_password = quote_plus(self.password)
@@ -187,4 +189,4 @@ class DatabaseConnection(object):
                 "%sWARNING:%s Using the '@' symbol in your database password can cause login issues with SQL Alchemy.%s"
                 % (WARN + bold + R, W, WARN)
             )
-        return db_host, db_name, db_user, db_password
+        return db_host, db_port, db_name, db_user, db_password

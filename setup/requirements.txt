@@ -20,3 +20,6 @@ setuptools-rust==0.10.3; python_version<'3.0'
 setuptools-rust; python_version>='3.0'
 msal
 requests
+psycopg2-binary
+py-postgresql
+psycopg2
