@@ -35,19 +35,8 @@ from tornado.options import options
 
 
 # Fills the database with some startup data.
-password = ""
-
-if (
-    options.setup.lower().startswith("dev")
-    or options.setup.lower().startswith("docker")
-    or options.tests
-    or options.auth.lower() == "azuread"
-):
-    admin_handle = "admin"
-    password = "rootthebox"
-else:
-    admin_handle = os.getenv("RTB_USER") or "admin"
-    password = os.getenv("RTB_PASSWORD")
+admin_handle = "admin"
+password = "rootthebox"
 
 # Theme objects
 css_files = [

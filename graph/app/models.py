@@ -1,3 +1,4 @@
+import os
 from sqlalchemy import Column, ForeignKey, Integer, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
@@ -517,7 +518,6 @@ t_team_to_hint = Table(
     Column("hint_id", ForeignKey("hint.id", ondelete="CASCADE"), nullable=False),
 )
 
-postgres = "postgresql://rtb:XHb6&oUUQy973@192.168.10.30:5432/rootthebox"
+postgres = f"postgresql://{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}@postgres:5432/{os.getenv('POSTGRES_DB')}"
 engine = create_engine(postgres)
 session = sessionmaker(bind=engine)
-
