@@ -23,11 +23,8 @@ fills the database with some startup data.
 
 
 import os
-import sys
-import getpass
 
 from libs.ConsoleColors import *
-from builtins import str, input
 from models import dbsession
 from models.Permission import Permission
 from models.Theme import Theme, ThemeFile
@@ -49,22 +46,8 @@ if (
     admin_handle = "admin"
     password = "rootthebox"
 else:
-    admin_handle = str(input(PROMPT + "RootTheBox Admin Username [admin]: ")) or "admin"
-    sys.stdout.write(PROMPT + "New Admin ")
-    sys.stdout.flush()
-    password1 = getpass.getpass()
-    sys.stdout.write(PROMPT + "Confirm New Admin ")
-    sys.stdout.flush()
-    password2 = getpass.getpass()
-    if password1 == password2 and len(password1) >= options.min_user_password_length:
-        password = password1
-    else:
-        print(
-            WARN
-            + "Error: Passwords did not match, or was less than %d chars"
-            % (options.min_user_password_length,)
-        )
-        os._exit(1)
+    admin_handle = os.getenv("RTB_USER") or "admin"
+    password = os.getenv("RTB_PASSWORD")
 
 # Theme objects
 css_files = [

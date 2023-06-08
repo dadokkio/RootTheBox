@@ -18,4 +18,6 @@ ADD . .
 
 VOLUME ["/opt/rtb/files"]
 
+CMD ["python3", "/opt/rtb/rootthebox.py", "--setup=prod"]
+
 ENTRYPOINT ["python3", "/opt/rtb/rootthebox.py", "--start"]

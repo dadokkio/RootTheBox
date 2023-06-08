@@ -2,9 +2,10 @@
 
 - [BADGE GRAPHQL](#badge-graphql)
   - [Generate model](#generate-model)
-  - [Execute - should be running from main rootthebox docker-compose on port 7007](#execute---should-be-running-from-main-rootthebox-docker-compose-on-port-7007)
+  - [Execute](#execute)
 
 ## Generate model
-sqlacodegen sqlite:///rootthebox.db > ../graph/app/models.py
+`sqlacodegen sqlite:///rootthebox.db > ../graph/app/models.py`
 
-## Execute - should be running from main rootthebox docker-compose on port 7007
+## Execute 
+- should be running from main rootthebox docker-compose on port 7007
