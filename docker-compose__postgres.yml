@@ -61,7 +61,15 @@ services:
     env_file:
       - rtb.env
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U rtb -d rootthebox" ]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready",
+          "-U",
+          "${MYSQL_USER}",
+          "-d",
+          "${MYSQL_PASSWORD}"
+        ]
       interval: 5s
       timeout: 5s
       retries: 5
