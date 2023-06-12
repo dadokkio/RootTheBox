@@ -46,7 +46,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    entrypoint: [ "python3", "/opt/rtb/rootthebox.py", "--setup=prod" ]
+    entrypoint: [ "python3", "/opt/rtb/rootthebox.py", "--setup=docker" ]
     volumes:
       - ./files:/opt/rtb/files:rw
     env_file:

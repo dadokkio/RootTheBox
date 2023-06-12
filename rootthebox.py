@@ -1120,7 +1120,6 @@ define("tests", default=False, help="runs the unit tests", type=bool)
 
 
 if __name__ == "__main__":
-
     # We need this to pull the --config option
     try:
         options.parse_command_line()
@@ -1134,7 +1133,7 @@ if __name__ == "__main__":
     if options.version:
         version()
     elif options.setup.startswith("docker"):
-        if not os.path.isfile(options.config) or (
+        if (
             options.sql_dialect == "sqlite"
             and not os.path.isfile(options.sql_database)
             and not os.path.isfile("%s.db" % options.sql_database)
@@ -1148,6 +1147,8 @@ if __name__ == "__main__":
             options.x_headers = True
             save_config()
             setup()
+        elif not os.path.isfile(options.config):
+            save_config()
         else:
             options.parse_config_file(options.config)
         options.start = True
@@ -1195,7 +1196,9 @@ if __name__ == "__main__":
     if options.admin_ips == ["[]"]:
         options.admin_ips = []  # Tornado issue?
 
-    if options.setup.lower()[:3] in ["pro", "dev"]:
+    if options.setup.lower()[:3] in ["pro", "dev"] or (
+        options.setup.lower() == "docker" and options.sql_dialect != "sqlite"
+    ):
         setup()
     elif options.start:
         start()
