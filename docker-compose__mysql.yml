@@ -3,6 +3,7 @@ services:
 
   memcached:
     hostname: memcached
+    restart: always
     image: memcached:latest
     ports:
       - "11211:11211"
@@ -13,12 +14,13 @@ services:
       context: graph
       dockerfile: Dockerfile
     hostname: graphql
+    restart: always
     ports:
       - "7007:7007"
     env_file:
       - rtb.env
     volumes:
-      - ./../files:/app/files:rw
+      - ./files/avatars:/avatars:rw
     depends_on:
       - webapp
 

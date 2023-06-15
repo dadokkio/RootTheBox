@@ -1,22 +1,152 @@
 import strawberry
 from . import models
-from sqlalchemy import select
+from datetime import datetime
+from sqlalchemy import select, text, desc
 from strawberry_sqlalchemy_mapper import StrawberrySQLAlchemyMapper
+from typing import Optional, Sequence
+
+
+# SVG and JPG rendering
+import cairosvg
+from PIL import Image
+from io import BytesIO
+from numpy import asarray
+from pathlib import Path
+
 
 strawberry_sqlalchemy_mapper = StrawberrySQLAlchemyMapper()
 
 
+PALETTE = [0, 0, 0, 0, 255, 0, 255, 0, 0, 255, 255, 0] + [0] * 252 * 3
+pimage = Image.new("P", (1, 1), 0)
+pimage.putpalette(PALETTE)
+
+
 @strawberry_sqlalchemy_mapper.type(models.User)
 class User:
-    __exclude__ = ["password"]
+    pass
+
+
+@strawberry_sqlalchemy_mapper.type(models.Team)
+class Team:
+    pass
+
+
+@strawberry_sqlalchemy_mapper.type(models.Hint)
+class Hint:
+    pass
+
+
+@strawberry.input
+class NoteFilter:
+    note: str
+
+
+@strawberry.type
+class TeamTimestamped:
+    records: Sequence[Team]
+    timestamp: str
+
+
+@strawberry.type
+class HintsTimestamped:
+    records: Sequence[Hint]
+    timestamp: str
+
+
+@strawberry.type
+class UsersTimestamped:
+    records: Sequence[User]
+    timestamp: str
+
+
+def convert_photo(path: Optional[str], team: bool = True) -> str:
+    if path:
+        path = f"/avatars/{path}"
+    else:
+        path = "/avatars/default_team.jpg" if team else "/avatars/default_user.jpg"
+
+    if Path(path).suffix.lower() == ".svg":
+        out = BytesIO()
+        cairosvg.svg2png(url=path, write_to=out)
+        img = Image.open(out)
+    else:
+        img = Image.open(path)
+    img = img.convert("RGB")
+    img = img.resize((112, 56))
+    gray_img = img.quantize(palette=pimage)
+    return "|".join(
+        hex(int("".join([bin(col).replace("0b", "") for col in line]), 2)).replace(
+            "0x", ""
+        )
+        for line in asarray(gray_img)[:10]
+    )
 
 
 @strawberry.type
 class Query:
     @strawberry.field
-    def users(self) -> list[User]:
+    def me(self, where: NoteFilter) -> Optional[User]:
         with models.session() as session:
-            return session.scalars(select(models.User)).all()
+            me = session.scalars(
+                select(models.User).where(models.User._notes == where.note)
+            ).first()
+            if me:
+                me._avatar = convert_photo(me._avatar, team=False)
+                return me
+            return me
+
+    @strawberry.field
+    def myteam(self, where: NoteFilter) -> Optional[Team]:
+        with models.session() as session:
+            team = session.scalars(
+                select(models.Team)
+                .join(models.User)
+                .where(models.User._notes == where.note)
+            ).first()
+            if team:
+                team._avatar = convert_photo(team._avatar, team=True)
+                return team
+            return team
+
+    @strawberry.field
+    def teams(self, order_by: str, limit: int, offset: int = 0) -> TeamTimestamped:
+        with models.session() as session:
+            return TeamTimestamped(
+                records=session.scalars(
+                    select(models.Team)
+                    .limit(limit)
+                    .offset(offset)
+                    .order_by(desc(text(order_by)))
+                ).all(),
+                timestamp=datetime.now().strftime("%Y-%m-%d %H:%M"),
+            )
+
+    @strawberry.field
+    def hints(self, order_by: str, limit: int, offset: int = 0) -> HintsTimestamped:
+        with models.session() as session:
+            return HintsTimestamped(
+                records=session.scalars(
+                    select(models.Hint)
+                    .limit(limit)
+                    .offset(offset)
+                    .order_by(desc(text(order_by)))
+                ).all(),
+                timestamp=datetime.now().strftime("%Y-%m-%d %H:%M"),
+            )
+
+    @strawberry.field
+    def users(self, order_by: str, limit: int, offset: int = 0) -> UsersTimestamped:
+        with models.session() as session:
+            return UsersTimestamped(
+                records=session.scalars(
+                    select(models.User)
+                    .limit(limit)
+                    .offset(offset)
+                    .order_by(desc(text(order_by)))
+                ).all(),
+                timestamp=datetime.now().strftime("%Y-%m-%d %H:%M"),
+            )
 
 
 strawberry_sqlalchemy_mapper.finalize()
