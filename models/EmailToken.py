@@ -22,7 +22,7 @@ Created on Jan 29, 2021
 
 from os import urandom
 from hashlib import sha256
-from sqlalchemy import Column, ForeignKey
+from sqlalchemy import Column, ForeignKey, desc
 from sqlalchemy.types import String, Boolean, Integer
 from models import dbsession
 from models.BaseModels import DatabaseObject
@@ -48,9 +48,12 @@ class EmailToken(DatabaseObject):
         return dbsession.query(cls).filter_by(id=_id).first()
 
     @classmethod
-    def by_user_id(cls, user_id):
+    def by_user_id(cls, user_id, all=False):
         """Returns the object with id of user_id"""
-        return dbsession.query(cls).filter_by(user_id=user_id).last()
+        if all:
+            return dbsession.query(cls).filter_by(user_id=user_id).all()
+        else:
+            return dbsession.query(cls).filter_by(user_id=user_id).order_by(desc('id')).first()
 
     @classmethod
     def count(cls):
@@ -60,4 +63,4 @@ class EmailToken(DatabaseObject):
     @classmethod
     def by_value(cls, value):
         """Returns the object with value of value"""
-        return dbsession.query(cls).filter_by(value=value).last()
+        return dbsession.query(cls).filter_by(value=value).order_by(desc('id')).first()
