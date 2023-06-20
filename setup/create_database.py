@@ -59,3 +59,4 @@ from models.IpAddress import IpAddress
 from models.SourceCode import SourceCode
 from models.Swat import Swat
 from models.Hint import Hint
+from models.News import News

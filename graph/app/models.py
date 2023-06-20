@@ -1,8 +1,10 @@
 import os
+from datetime import datetime
 from sqlalchemy import Column, ForeignKey, Integer, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy import (
+    DateTime,
     Column,
     ForeignKey,
     Index,
@@ -112,6 +114,15 @@ class Penalty(Base):
     flag = relationship("Flag", back_populates="penalty")
     team = relationship("Team", back_populates="penalty")
     user = relationship("User", back_populates="penalty")
+
+
+class News(Base):
+    __tablename__ = "news"
+    id = Column(Integer, primary_key=True)
+    title = Column(String(256), nullable=False)
+    message = Column(String(256), nullable=False)
+    created = Column(DateTime, default=datetime.now)
+    icon_url = Column(String(256))
 
 
 t_team_to_box = Table(

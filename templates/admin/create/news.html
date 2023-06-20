@@ -1,0 +1,86 @@
+{% extends "../../main.html" %}
+
+{% block title %}{{_("Create News")}}{% end %}
+
+{% block header %}
+<script src="/static/js/pages/admin/create/news.js"></script>
+{% end %}
+
+{% block content %}
+<div class="container">
+    <h1>
+        <i class="fa fa-comment"></i>
+        {{_("Create News")}}
+    </h1>
+    <br />
+    {% if errors is not None and len(errors) != 0 %}
+        {% for error in errors %}
+        <div class="alert alert-error">
+            <a class="close" data-dismiss="alert" href="#">&times;</a>
+            <h4 class="alert-heading">{{_("ERROR")}}</h4>
+            {{ error }}
+        </div>
+        {% end %}
+    {% end %}
+    <div class="well">
+        <form class="form-horizontal" action="/admin/create/news" method="post" enctype="multipart/form-data" autocomplete="on">
+            {% raw xsrf_form_html() %}
+            <div class="control-group">
+                <label class="control-label" for="news_title">{{_("News Title")}}</label>
+                <div class="controls">
+                    <input autofocus required id="news-title" name="title" maxlength="32" type="text" placeholder="{{_('News Title')}}"
+                           rel="popover"
+                           data-original-title="{{_('News Title')}}"
+                           data-content="{{_('What is the title of this news?')}} [3-32 {{_('Characters')}}]">
+                </div>
+            </div>
+            <div class="control-group">
+                <label class="control-label" for="message">{{_("Message")}}</label>
+                <div class="controls">
+                    <textarea class="toolbar" id="message" style="width: 60%;" rows="5" name="message" maxlength="1024" placeholder="{{_('Message')}}"
+                              rel="popover"
+                              data-original-title="{{_('Message')}}"
+                              data-html="true"
+                              data-content="{{_('News Message')}} [Max: 1024 {{_('Characters')}}].<br/><br/>{{_('Supports')}} Markdown (GitHub Style)">
+                    </textarea>
+                </div>
+            </div>
+            <div class="control-group">
+                <label class="control-label" for="new">
+                    {{_("News Icon")}}
+                </label>
+                <div class="controls">
+                    <input id="icon_url" name="icon_url" type="hidden" value="SUCCESS" />
+                    <div id="icon-url-type-button" class="btn-group" data-toggle="buttons-radio"
+                         rel="popover"
+                         data-original-title="{{_('News Icon')}}"
+                         data-html="true"
+                         data-content="{{_('Icon to specify news type.')}}">
+                        <button id="icon-url-success" type="button" class="btn btn-primary">
+                            <i id="icon-url-success-icon" class="fa fa-fw fa-check-square-o"></i>
+                            {{_("Success")}}
+                        </button>
+                        <button id="icon-url-info" type="button" class="btn btn-primary">
+                            <i id="icon-url-info-icon" class="fa fa-fw fa-square-o"></i>
+                            {{_("Info")}}
+                        </button>
+                        <button id="icon-url-warning" type="button" class="btn btn-primary">
+                            <i id="icon-url-warning-icon" class="fa fa-fw fa-square-o"></i>
+                            {{_("Warning")}}
+                        </button>
+                        <button id="icon-url-error" type="button" class="btn btn-primary">
+                            <i id="icon-url-error-icon" class="fa fa-fw fa-square-o"></i>
+                            {{_("Error")}}
+                        </button>                                                
+                    </div>
+                </div>
+            </div>
+            <div class="control-group">
+                <div class="controls">
+                    <button class="btn btn-primary" type="submit">{{_("Create News")}}</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% end %}

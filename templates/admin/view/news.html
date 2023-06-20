@@ -1,0 +1,157 @@
+{% extends "../../main.html" %}
+
+{% block title %}{{ _("News") }}{% end %}
+
+{% block header %}
+<script src="/static/js/pages/admin/view/news.js"></script>
+{% end %}
+
+{% block modals %}
+{% from tornado.options import options %}
+<!-- Hidden Edit Form -->
+<div id="edit-news-item-modal" class="modal hide fade" style="display: none; ">
+    <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h3>
+            <i class="fa fa-pencil"></i>
+            {{ _ ("Edit News") }}
+        </h3>
+    </div>
+    <div class="modal-body">
+        <br />
+        <form id="edit-news-item-form" class="form-horizontal" action="/admin/edit/news" method="post">
+            {% raw xsrf_form_html() %}
+            <input type="hidden" id="edit-news-item-uuid" name="uuid" value="" />
+            <div class="control-group">
+                <label class="control-label" for="title">{{ _("News Title") }}</label>
+                <div class="controls">
+                    <input autofocus id="edit-news-item-title" name="title" maxlength="24" minlength="3" type="text" placeholder="Title" />
+                </div>
+            </div>
+            <div class="control-group">
+                <div class="controls">
+                    <textarea autofocus id="edit-news-message" name="message" maxlength="1024" type="text" placeholder="{{_('Message')}}"
+                           data-original-title="{{_('Message')}}">
+                    </textarea>
+                </div>
+            </div>
+            <div class="control-group">
+                <label class="control-label" for="new">{{_("News Icon")}}</label>
+                <div class="controls">
+                    <input id="icon_url" name="icon_url" type="hidden" value="SUCCESS" />
+                    <div id="edit-news-item-icon-url" class="btn-group" data-toggle="buttons-radio"
+                         rel="popover"
+                         data-original-title="{{_('News Icon')}}"
+                         data-html="true"
+                         data-content="{{_('Icon to specify news type.')}}">
+                        <button id="icon-url-success" type="button" class="btn btn-primary">
+                            <i id="icon-url-success-icon" class="fa fa-fw fa-square-o"></i>
+                            {{_("Success")}}
+                        </button>
+                        <button id="icon-url-info" type="button" class="btn btn-primary">
+                            <i id="icon-url-info-icon" class="fa fa-fw fa-square-o"></i>
+                            {{_("Info")}}
+                        </button>
+                        <button id="icon-url-warning" type="button" class="btn btn-primary">
+                            <i id="icon-url-warning-icon" class="fa fa-fw fa-square-o"></i>
+                            {{_("Warning")}}
+                        </button>
+                        <button id="icon-url-error" type="button" class="btn btn-primary">
+                            <i id="icon-url-error-icon" class="fa fa-fw fa-square-o"></i>
+                            {{_("Error")}}
+                        </button>                                                
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <a href="#" class="btn" data-dismiss="modal">{{ _("Close") }}</a>
+        <button id="edit-news-item-submit" type="button" class="btn btn-primary">
+            <i class="fa fa-save"></i>
+            {{ _("Save") }}
+        </button>
+    </div>
+</div>
+<div id="delete-news-modal" class="modal hide fade" style="display: none; ">
+    <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h3><i class="fa fa-fw fa-times-circle-o"></i> {{ _("Delete News") }}</h3>
+    </div>
+    <div class="modal-body">
+    <p>
+        {{ _("Are you sure you want to delete this news?") }} <br />
+    </p>
+    <form id="delete-news-form" method="post" action="/admin/delete/news">
+        {% raw xsrf_form_html() %}
+        <input id="delete-news-uuid" name="uuid" type="hidden" value="" />
+    </form>
+    </div>
+    <div class="modal-footer">
+        <a href="#" class="btn" data-dismiss="modal">{{ _("Close") }}</a>
+        <button id="delete-news-submit" type="button" class="btn btn-danger">
+            <i class="fa fa-fw fa-times-circle-o"></i>
+            {{ _("Delete") }}
+        </button>
+    </div>
+</div>
+{% end %}
+
+{% block content %}
+{% from models.News import News %}
+<div class="container">
+    <h2>
+        <i class="fa fa-comment"></i>
+        {{ _("Manage News") }}
+    </h2>
+    <br />
+    {% if errors is not None and len(errors) != 0 %}
+        {% for error in errors %}
+              <div class="alert alert-error">
+                <a class="close" data-dismiss="alert" href="#">&times;</a>
+                <h4 class="alert-heading">{{_("ERROR")}}</h4>
+                {{ error }}
+              </div>
+        {% end %}
+      {% end %}
+      <div class="well">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th class="shortcolumn"> # </th>
+                    <th class="shortcolumn"> {{ _("News title") }} </th>
+                    <th> {{ _("Message") }}</th>
+                    <th class="shortcolumn"> {{ _("Created") }}</th>
+                    <th class="shortcolumn"> {{ _("Icon") }}</th>
+                    <th class="shortcolumn"><!-- Button --></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for index, item in enumerate(News.all()) %}
+                    <tr>
+                        <td class="shortcolumn"> {{ index + 1 }} </td>
+                        <td class="shortcolumn"> {{ item.title }} </td>
+                        <td> {{ item.message }}</td>
+                        <td class="shortcolumn"> {{ item.created }} </td>
+                        <td class="shortcolumn"> 
+                            <img src="/static/images/{{ item.icon_url.lower() }}.png" style="width: 30px; float: right; padding-bottom: 10px">
+                        </td>
+                        <td class="shortcolumn">
+                            <a id="edit-news-item-button{{ index }}" class="btn btn-mini" data-toggle="modal" href="#edit-news-item-modal" data-uuid="{{ item.uuid }}" data-title="{{ item.title }}" data-message="{{ item.message }}" data-icon="{{ item.icon_url }}">
+                                &nbsp;&nbsp;<i class="fa fa-pencil"></i>&nbsp;
+                                {{ _("Edit") }}&nbsp;&nbsp;&nbsp;
+                            </a>
+                        </td>
+                        <td class="shortcolumn">
+                            <a id="delete-news-button-{{ item.uuid }}" class="btn btn-danger btn-mini" data-toggle="modal" href="#delete-news-modal" data-uuid="{{ item.uuid }}">
+                                <i class="fa fa-fw fa-times-circle-o"></i>
+                                {{ _("Delete") }}&nbsp;
+                            </a>
+                        </td>                       
+                    </tr>
+                {% end %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% end %}

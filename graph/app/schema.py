@@ -1,10 +1,9 @@
 import strawberry
 from . import models
 from datetime import datetime
+from typing import Optional, Sequence
 from sqlalchemy import select, text, desc
 from strawberry_sqlalchemy_mapper import StrawberrySQLAlchemyMapper
-from typing import Optional, Sequence
-
 
 # SVG and JPG rendering
 import cairosvg
@@ -24,7 +23,7 @@ pimage.putpalette(PALETTE)
 
 @strawberry_sqlalchemy_mapper.type(models.User)
 class User:
-    pass
+    __exclude__ = ["_password"]
 
 
 @strawberry_sqlalchemy_mapper.type(models.Team)
@@ -34,6 +33,11 @@ class Team:
 
 @strawberry_sqlalchemy_mapper.type(models.Hint)
 class Hint:
+    pass
+
+
+@strawberry_sqlalchemy_mapper.type(models.News)
+class News:
     pass
 
 
@@ -60,6 +64,12 @@ class UsersTimestamped:
     timestamp: str
 
 
+@strawberry.type
+class NewsTimestamped:
+    records: Sequence[News]
+    timestamp: str
+
+
 def convert_photo(path: Optional[str], team: bool = True) -> str:
     if path:
         path = f"/avatars/{path}"
@@ -75,12 +85,19 @@ def convert_photo(path: Optional[str], team: bool = True) -> str:
     img = img.convert("RGB")
     img = img.resize((112, 56))
     gray_img = img.quantize(palette=pimage)
-    return "|".join(
-        hex(int("".join([bin(col).replace("0b", "") for col in line]), 2)).replace(
-            "0x", ""
-        )
-        for line in asarray(gray_img)[:10]
-    )
+    ret_string = ""
+    ret_tmp = ""
+    block = 1
+    for line in asarray(gray_img):
+        for col in line:
+            ret_tmp += bin(col).replace("0b", "").zfill(2)
+            if block == 14:
+                ret_string += hex(int(ret_tmp, 2)).replace("0x", "")
+                ret_string += "|"
+                ret_tmp = ""
+                block = 0
+            block += 1
+    return ret_string
 
 
 @strawberry.type
@@ -92,7 +109,7 @@ class Query:
                 select(models.User).where(models.User._notes == where.note)
             ).first()
             if me:
-                me._avatar = convert_photo(me._avatar, team=False)
+                me._avatar = convert_photo(me._avatar, team=False)  # type: ignore
                 return me
             return me
 
@@ -105,7 +122,7 @@ class Query:
                 .where(models.User._notes == where.note)
             ).first()
             if team:
-                team._avatar = convert_photo(team._avatar, team=True)
+                team._avatar = convert_photo(team._avatar, team=True)  # type: ignore
                 return team
             return team
 
@@ -141,6 +158,19 @@ class Query:
             return UsersTimestamped(
                 records=session.scalars(
                     select(models.User)
+                    .limit(limit)
+                    .offset(offset)
+                    .order_by(desc(text(order_by)))
+                ).all(),
+                timestamp=datetime.now().strftime("%Y-%m-%d %H:%M"),
+            )
+
+    @strawberry.field
+    def news(self, order_by: str, limit: int, offset: int = 0) -> NewsTimestamped:
+        with models.session() as session:
+            return NewsTimestamped(
+                records=session.scalars(
+                    select(models.News)
                     .limit(limit)
                     .offset(offset)
                     .order_by(desc(text(order_by)))

@@ -38,6 +38,7 @@ from handlers.MissionsHandler import BoxHandler
 from models.Box import Box, FlagsSubmissionType
 from models.Corporation import Corporation
 from models.Category import Category
+from models.News import News
 from models.GameLevel import GameLevel
 from models.FlagAttachment import FlagAttachment
 from models.FlagChoice import FlagChoice
@@ -84,6 +85,7 @@ class AdminCreateHandler(BaseHandler):
             "hint": "admin/create/hint.html",
             "team": "admin/create/team.html",
             "category": "admin/create/category.html",
+            "news": "admin/create/news.html",
         }
         if len(args) and args[0] in game_objects:
             self.render(game_objects[args[0]], box=box, errors=None)
@@ -107,6 +109,7 @@ class AdminCreateHandler(BaseHandler):
             "hint": self.create_hint,
             "team": self.create_team,
             "category": self.create_category,
+            "news": self.create_news,
         }
         if len(args) and args[0] in game_objects:
             game_objects[args[0]]()
@@ -228,6 +231,19 @@ class AdminCreateHandler(BaseHandler):
                 self.redirect("/admin/view/game_objects#%s" % box.uuid)
         except ValidationError as error:
             self.render("admin/create/box.html", errors=[str(error)])
+
+    def create_news(self):
+        """Create a news object"""
+        try:
+            title = self.get_argument("title", "")
+            message = self.get_argument("message", "")
+            icon_url = self.get_argument("icon_url", "")
+            news = News(title=title, message=message, icon_url=icon_url)
+            self.dbsession.add(news)
+            self.dbsession.commit()
+            self.redirect("/admin/view/news#%s" % news.uuid)
+        except ValidationError as error:
+            self.render("admin/create/news.html", errors=[str(error)])
 
     def create_flag_static(self):
         """Create a static flag"""
@@ -396,6 +412,7 @@ class AdminViewHandler(BaseHandler):
             "fileshare": "admin/view/shared_files.html",
             "statistics": "admin/view/statistics.html",
             "notifications": "admin/view/notifications.html",
+            "news": "admin/view/news.html",
         }
         if len(args) and args[0] in uri:
             self.render(uri[args[0]], errors=None, success=None)
@@ -526,6 +543,7 @@ class AdminEditHandler(BaseHandler):
             "hint": "game_objects",
             "market_item": "market_objects",
             "category": "categories",
+            "news": "news",
         }
         if len(args) and args[0] in uri:
             self.redirect("/admin/view/%s" % uri[args[0]])
@@ -549,6 +567,7 @@ class AdminEditHandler(BaseHandler):
             "category": self.edit_category,
             "flag_order": self.edit_flag_order,
             "level_access": self.edit_level_access,
+            "news": self.edit_news,
         }
         if len(args) and args[0] in uri:
             uri[args[0]]()
@@ -932,6 +951,21 @@ class AdminEditHandler(BaseHandler):
         except ValidationError as error:
             self.render("admin/view/game_levels.html", errors=[str(error)])
 
+    def edit_news(self):
+        """Update news objects"""
+        try:
+            news = News.by_uuid(self.get_argument("uuid", ""))
+            if news is None:
+                raise ValidationError("News does not exist")
+            news.title = self.get_argument("title", " ")
+            news.message = self.get_argument("message", "")
+            news.icon_url = self.get_argument("icon_url", "")
+            self.dbsession.add(news)
+            self.dbsession.commit()
+            self.redirect("/admin/view/news")
+        except ValidationError as error:
+            self.render("admin/view/news.html", errors=[str(error)])
+
     def box_level(self):
         """Changes a box level"""
         errors = []
@@ -1007,6 +1041,7 @@ class AdminDeleteHandler(BaseHandler):
             "corporation": self.del_corp,
             "game_level": self.del_game_level,
             "category": self.del_category,
+            "news": self.del_news,
         }
         if len(args) and args[0] in uri:
             uri[args[0]]()
@@ -1105,6 +1140,20 @@ class AdminDeleteHandler(BaseHandler):
             self.render(
                 "admin/view/categories.html",
                 errors=["Category does not exist in database."],
+            )
+
+    def del_news(self):
+        """Delete a news object"""
+        news = News.by_uuid(self.get_argument("uuid", ""))
+        if news is not None:
+            logging.info("Delete news: %s" % news.title)
+            self.dbsession.delete(news)
+            self.dbsession.commit()
+            self.redirect("/admin/view/news")
+        else:
+            self.render(
+                "admin/view/news.html",
+                errors=["News does not exist in database."],
             )
 
     def del_box(self, box=None):
