@@ -16,11 +16,6 @@ from pathlib import Path
 strawberry_sqlalchemy_mapper = StrawberrySQLAlchemyMapper()
 
 
-PALETTE = [0, 0, 0, 0, 255, 0, 255, 0, 0, 255, 255, 0] + [0] * 252 * 3
-pimage = Image.new("P", (1, 1), 0)
-pimage.putpalette(PALETTE)
-
-
 @strawberry_sqlalchemy_mapper.type(models.User)
 class User:
     __exclude__ = ["_password"]
@@ -84,7 +79,7 @@ def convert_photo(path: Optional[str], team: bool = True) -> str:
         img = Image.open(path)
     img = img.convert("RGB")
     img = img.resize((112, 56))
-    gray_img = img.quantize(palette=pimage)
+    gray_img = img.quantize(4, dither=Image.Dither.NONE)
     ret_string = ""
     ret_tmp = ""
     block = 1
