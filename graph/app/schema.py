@@ -2,7 +2,7 @@ import strawberry
 from . import models
 from datetime import datetime
 from typing import Optional, Sequence
-from sqlalchemy import select, text, desc
+from sqlalchemy import select, text, desc, func
 from strawberry_sqlalchemy_mapper import StrawberrySQLAlchemyMapper
 
 # SVG and JPG rendering
@@ -38,30 +38,41 @@ class News:
 
 @strawberry.input
 class NoteFilter:
+    """filters by serial"""
+
     note: str
 
 
 @strawberry.type
 class TeamTimestamped:
+    """scoreboard"""
+
     records: Sequence[Team]
-    timestamp: str
-
-
-@strawberry.type
-class HintsTimestamped:
-    records: Sequence[Hint]
-    timestamp: str
-
-
-@strawberry.type
-class UsersTimestamped:
-    records: Sequence[User]
     timestamp: str
 
 
 @strawberry.type
 class NewsTimestamped:
     records: Sequence[News]
+    timestamp: str
+
+
+@strawberry.type
+class StatsHint:
+    team: Sequence[Team]
+    total: int
+
+
+@strawberry.type
+class StatsError:
+    team: Sequence[Team]
+    total: int
+
+
+@strawberry.type
+class StatsTimestamped:
+    hints: Sequence[StatsHint]
+    errors: Sequence[StatsError]
     timestamp: str
 
 
@@ -135,32 +146,6 @@ class Query:
             )
 
     @strawberry.field
-    def hints(self, order_by: str, limit: int, offset: int = 0) -> HintsTimestamped:
-        with models.session() as session:
-            return HintsTimestamped(
-                records=session.scalars(
-                    select(models.Hint)
-                    .limit(limit)
-                    .offset(offset)
-                    .order_by(desc(text(order_by)))
-                ).all(),
-                timestamp=datetime.now().strftime("%Y-%m-%d %H:%M"),
-            )
-
-    @strawberry.field
-    def users(self, order_by: str, limit: int, offset: int = 0) -> UsersTimestamped:
-        with models.session() as session:
-            return UsersTimestamped(
-                records=session.scalars(
-                    select(models.User)
-                    .limit(limit)
-                    .offset(offset)
-                    .order_by(desc(text(order_by)))
-                ).all(),
-                timestamp=datetime.now().strftime("%Y-%m-%d %H:%M"),
-            )
-
-    @strawberry.field
     def news(self, order_by: str, limit: int, offset: int = 0) -> NewsTimestamped:
         with models.session() as session:
             return NewsTimestamped(
@@ -170,6 +155,37 @@ class Query:
                     .offset(offset)
                     .order_by(desc(text(order_by)))
                 ).all(),
+                timestamp=datetime.now().strftime("%Y-%m-%d %H:%M"),
+            )
+
+    @strawberry.field
+    def stats() -> StatsTimestamped:
+        with models.session() as session:
+            hints = [
+                StatsHint(team=x[0], total=x[1])
+                for x in session.query(
+                    models.Team, func.count(models.Hint.id).label("total")
+                )
+                .join(models.Hint, models.Team.hint)
+                .group_by(models.Team)
+                .order_by(text("total DESC"))
+                .limit(5)
+            ]
+
+            errors = [
+                StatsError(team=x[0], total=x[1])
+                for x in session.query(
+                    models.Team, func.count(models.Penalty.id).label("total")
+                )
+                .join(models.Penalty)
+                .group_by(models.Team)
+                .order_by(text("total DESC"))
+                .limit(5)
+            ]
+
+            return StatsTimestamped(
+                hints=hints,
+                errors=errors,
                 timestamp=datetime.now().strftime("%Y-%m-%d %H:%M"),
             )
 
