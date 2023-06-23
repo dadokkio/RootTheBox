@@ -18,17 +18,13 @@ strawberry_sqlalchemy_mapper = StrawberrySQLAlchemyMapper()
 
 @strawberry_sqlalchemy_mapper.type(models.User)
 class User:
-    __exclude__ = ["_password"]
+    pass
 
 
 @strawberry_sqlalchemy_mapper.type(models.Team)
 class Team:
-    pass
-
-
-@strawberry_sqlalchemy_mapper.type(models.Hint)
-class Hint:
-    pass
+    flags_captured = int
+    __exclude__ = ["flag", "box", "hint", "game_level", "penalty"]
 
 
 @strawberry_sqlalchemy_mapper.type(models.News)
@@ -41,6 +37,21 @@ class NoteFilter:
     """filters by serial"""
 
     note: str
+
+
+@strawberry.type
+class Scoreboard:
+    Name: str
+    Score: int
+    Flags: int
+
+
+@strawberry.type
+class ScoreboardTimestamped:
+    """scoreboard"""
+
+    records: Sequence[Scoreboard]
+    timestamp: str
 
 
 @strawberry.type
@@ -58,21 +69,17 @@ class NewsTimestamped:
 
 
 @strawberry.type
-class StatsHint:
-    team: Sequence[Team]
-    total: int
-
-
-@strawberry.type
-class StatsError:
-    team: Sequence[Team]
-    total: int
+class Stats:
+    Name: str
+    Total: int
 
 
 @strawberry.type
 class StatsTimestamped:
-    hints: Sequence[StatsHint]
-    errors: Sequence[StatsError]
+    team_hints: Sequence[Stats]
+    team_errors: Sequence[Stats]
+    flag_hints: Sequence[Stats]
+    flag_errors: Sequence[Stats]
     timestamp: str
 
 
@@ -89,7 +96,7 @@ def convert_photo(path: Optional[str], team: bool = True) -> str:
     else:
         img = Image.open(path)
     img = img.convert("RGB")
-    img = img.resize((112, 56))
+    img = img.resize((140, 70))
     gray_img = img.quantize(4, dither=Image.Dither.NONE)
     ret_string = ""
     ret_tmp = ""
@@ -97,11 +104,9 @@ def convert_photo(path: Optional[str], team: bool = True) -> str:
     for line in asarray(gray_img):
         for col in line:
             ret_tmp += bin(col).replace("0b", "").zfill(2)
-            if block == 14:
+            if block % 14 == 0:
                 ret_string += hex(int(ret_tmp, 2)).replace("0x", "")
-                ret_string += "|"
                 ret_tmp = ""
-                block = 0
             block += 1
     return ret_string
 
@@ -133,6 +138,28 @@ class Query:
             return team
 
     @strawberry.field
+    def scoreboard(self) -> ScoreboardTimestamped:
+        with models.session() as session:
+            records = (
+                session.query(
+                    models.Team._name.label("Name"),
+                    models.Team.money.label("Score"),
+                    func.count(models.Flag.id).label("Flags"),
+                )
+                .select_from(models.Team)
+                .join(models.Team.flag)
+                .group_by(models.Team.id)
+                .order_by(desc(models.Team.money))
+            )
+            return ScoreboardTimestamped(
+                records=[
+                    Scoreboard(Name=record.Name, Score=record.Score, Flags=record.Flags)
+                    for record in records.all()
+                ],
+                timestamp=datetime.now().strftime("%Y-%m-%d %H:%M"),
+            )
+
+    @strawberry.field
     def teams(self, order_by: str, limit: int, offset: int = 0) -> TeamTimestamped:
         with models.session() as session:
             return TeamTimestamped(
@@ -161,31 +188,61 @@ class Query:
     @strawberry.field
     def stats() -> StatsTimestamped:
         with models.session() as session:
-            hints = [
-                StatsHint(team=x[0], total=x[1])
+            team_hints = [
+                Stats(Name=x[0], Total=x[1])
                 for x in session.query(
-                    models.Team, func.count(models.Hint.id).label("total")
+                    models.Team._name, func.count(models.Hint.id).label("total")
                 )
-                .join(models.Hint, models.Team.hint)
+                .select_from(models.Team)
+                .join(models.Team.hint)
                 .group_by(models.Team)
                 .order_by(text("total DESC"))
                 .limit(5)
             ]
 
-            errors = [
-                StatsError(team=x[0], total=x[1])
+            team_errors = [
+                Stats(Name=x[0], Total=x[1])
                 for x in session.query(
-                    models.Team, func.count(models.Penalty.id).label("total")
+                    models.Team._name, func.count(models.Penalty.id).label("total")
                 )
-                .join(models.Penalty)
+                .select_from(models.Team)
+                .join(models.Team.penalty)
                 .group_by(models.Team)
+                .order_by(text("total DESC"))
+                .limit(5)
+            ]
+
+            flag_hints = [
+                Stats(Name=x[0], Total=x[1])
+                for x in session.query(
+                    func.concat(models.Flag.box_id, ".", models.Flag.id),
+                    func.count(models.Hint.id).label("total"),
+                )
+                .select_from(models.Flag)
+                .join(models.Flag.hint)
+                .group_by(models.Flag)
+                .order_by(text("total DESC"))
+                .limit(5)
+            ]
+
+            flag_errors = [
+                Stats(Name=x[0], Total=x[1])
+                for x in session.query(
+                    func.concat(models.Flag.box_id, ".", models.Flag.id),
+                    func.count(models.Penalty.id).label("total"),
+                )
+                .select_from(models.Flag)
+                .join(models.Flag.penalty)
+                .group_by(models.Flag)
                 .order_by(text("total DESC"))
                 .limit(5)
             ]
 
             return StatsTimestamped(
-                hints=hints,
-                errors=errors,
+                team_hints=team_hints,
+                team_errors=team_errors,
+                flag_hints=flag_hints,
+                flag_errors=flag_errors,
                 timestamp=datetime.now().strftime("%Y-%m-%d %H:%M"),
             )
 
