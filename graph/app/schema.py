@@ -105,7 +105,7 @@ def convert_photo(path: Optional[str], team: bool = True) -> str:
         for col in line:
             ret_tmp += bin(col).replace("0b", "").zfill(2)
             if block % 14 == 0:
-                ret_string += hex(int(ret_tmp, 2)).replace("0x", "")
+                ret_string += hex(int(ret_tmp, 2)).replace("0x", "").zfill(7)
                 ret_tmp = ""
             block += 1
     return ret_string
