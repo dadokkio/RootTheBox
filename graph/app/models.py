@@ -125,6 +125,27 @@ class News(Base):
     icon_url = Column(String(256))
 
 
+class Scenario(Base):
+    __tablename__ = "scenario"
+    id = Column(Integer, primary_key=True)
+    uuid = Column(String(36), nullable=False, unique=True)
+    _name = Column(String(32))
+    _description = Column(String(512))
+    # option = relationship("Option", back_populates="scenario")
+
+
+class Option(Base):
+    __tablename__ = "option"
+    id = Column(Integer, primary_key=True)
+    uuid = Column(String(36), nullable=False, unique=True)
+    _name = Column(String(32))
+    _description = Column(String(512))
+    scenario_id = Column(ForeignKey("scenario.id"))
+    next_scenario_id = Column(ForeignKey("scenario.id"))
+    scenario = relationship("Scenario", foreign_keys=[scenario_id], backref="option")
+    # next_scenario = relationship("Scenario", foreign_keys=[next_scenario_id])
+
+
 t_team_to_box = Table(
     "team_to_box",
     metadata,

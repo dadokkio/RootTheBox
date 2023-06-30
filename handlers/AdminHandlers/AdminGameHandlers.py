@@ -46,6 +46,9 @@ from models.Category import Category
 from models.Notification import Notification
 from models.RegistrationToken import RegistrationToken
 from models.EmailToken import EmailToken
+from models.News import News
+from models.Scenario import Scenario
+from models.Option import Option
 from libs.EventManager import EventManager
 from libs.SecurityDecorators import *
 from libs.StringCoding import encode, decode
@@ -161,7 +164,6 @@ class AdminGameHandler(BaseHandler):
 
 
 class AdminMessageHandler(BaseHandler):
-
     event_manager = EventManager.instance()
 
     """ Send a global notification message """
@@ -527,7 +529,6 @@ class AdminGitStatusHandler(BaseHandler):
 
 
 class AdminExportHandler(BaseHandler):
-
     API_VERSION = "1"
 
     @restrict_ip_address
@@ -722,6 +723,16 @@ class AdminResetHandler(BaseHandler):
             dbsession.flush()
             Penalty.clear()
             Notification.clear()
+            all_news = News.all()
+            for news in all_news:
+                dbsession.delete(news)
+            dbsession.commit()
+            scenarios = Scenario.all()
+            for scenario in scenarios:
+                for option in scenario.options:
+                    dbsession.delete(option)
+                dbsession.delete(scenario)
+            dbsession.commit()
             swats = Swat.all()
             for swat in swats:
                 dbsession.delete(swat)
@@ -786,6 +797,16 @@ class AdminResetDeleteHandler(BaseHandler):
             dbsession.flush()
             Penalty.clear()
             Notification.clear()
+            all_news = News.all()
+            for news in all_news:
+                dbsession.delete(news)
+            dbsession.commit()
+            scenarios = Scenario.all()
+            for scenario in scenarios:
+                for option in scenario.options:
+                    dbsession.delete(option)
+                dbsession.delete(scenario)
+            dbsession.commit()
             swats = Swat.all()
             for swat in swats:
                 dbsession.delete(swat)
