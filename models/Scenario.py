@@ -25,7 +25,7 @@ import xml.etree.cElementTree as ET
 from uuid import uuid4
 from collections import OrderedDict
 from sqlalchemy import Column
-from sqlalchemy.types import Unicode, String
+from sqlalchemy.types import Unicode, String, Boolean
 from sqlalchemy.orm import relationship, backref
 from libs.ValidationError import ValidationError
 from models import dbsession
@@ -40,6 +40,7 @@ class Scenario(DatabaseObject):
     uuid = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid4()))
     _name = Column(Unicode(32))
     _description = Column(Unicode(512))
+    _starter = Column(Boolean, default=False, nullable=False)
     _options = relationship(
         "Option",
         backref=backref("scenario", lazy="select"),

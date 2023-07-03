@@ -11,6 +11,7 @@ from sqlalchemy import (
     Integer,
     String,
     Table,
+    Boolean,
 )
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -131,7 +132,7 @@ class Scenario(Base):
     uuid = Column(String(36), nullable=False, unique=True)
     _name = Column(String(32))
     _description = Column(String(512))
-    # option = relationship("Option", back_populates="scenario")
+    _starter = Column(Boolean, default=False, nullable=False)
 
 
 class Option(Base):
@@ -143,7 +144,6 @@ class Option(Base):
     scenario_id = Column(ForeignKey("scenario.id"))
     next_scenario_id = Column(ForeignKey("scenario.id"))
     scenario = relationship("Scenario", foreign_keys=[scenario_id], backref="option")
-    # next_scenario = relationship("Scenario", foreign_keys=[next_scenario_id])
 
 
 t_team_to_box = Table(

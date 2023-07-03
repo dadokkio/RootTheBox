@@ -18,12 +18,12 @@ strawberry_sqlalchemy_mapper = StrawberrySQLAlchemyMapper()
 
 @strawberry_sqlalchemy_mapper.type(models.Scenario)
 class Scenario:
-    pass
+    __exclude__ = ["id"]
 
 
 @strawberry_sqlalchemy_mapper.type(models.Option)
 class Option:
-    __exclude__ = ["next_scenario_id"]
+    __exclude__ = ["id", "scenario", "scenario_id", "name"]
 
 
 @strawberry_sqlalchemy_mapper.type(models.User)
@@ -188,16 +188,10 @@ class Query:
             )
 
     @strawberry.field
-    def scenario(
-        self, uuid: str | None = None, option_uuid: str | None = None
-    ) -> ScenarioTimestamped:
+    def scenario(self, option_uuid: str | None = None) -> ScenarioTimestamped:
         with models.session() as session:
             scenario = None
-            if uuid:
-                scenario = session.scalars(
-                    select(models.Scenario).where(models.Scenario.uuid == uuid)
-                ).first()
-            elif option_uuid:
+            if option_uuid:
                 if option := session.scalars(
                     select(models.Option).where(models.Option.uuid == option_uuid)
                 ).first():
@@ -206,6 +200,10 @@ class Query:
                             models.Scenario.id == option.next_scenario_id
                         )
                     ).first()
+            else:
+                scenario = session.scalars(
+                    select(models.Scenario).where(models.Scenario._starter == True)
+                ).first()
             return ScenarioTimestamped(
                 scenario=scenario,
                 timestamp=datetime.now().strftime("%Y-%m-%d %H:%M"),
