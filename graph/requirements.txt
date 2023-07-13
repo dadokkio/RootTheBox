@@ -1,11 +1,11 @@
-fastapi==0.97.0
-pydantic==1.10.9
+fastapi==0.100.0
+pydantic==2.0.2
 uvicorn==0.22.0
-strawberry-graphql[fastapi]==0.184.0
+strawberry-graphql[fastapi]==0.194.4
 aiosqlite==0.19.0
-sqlalchemy==2.0.16
+sqlalchemy==2.0.18
 strawberry-sqlalchemy-mapper==0.1.1
 psycopg2-binary==2.9.6
-Pillow==9.5.0
-numpy==1.24.3
+Pillow==10.0.0
+numpy==1.25.1
 CairoSVG==2.7.0

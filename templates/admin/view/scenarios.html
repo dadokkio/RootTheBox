@@ -1,0 +1,262 @@
+{% extends "../../main.html" %}
+
+{% block title %}{{ _("Scenario Management")}}{% end %}
+
+{% block header %}
+<link rel="stylesheet" href="/static/css/pages/admin/game_objects.css" type="text/css" />
+<link rel="stylesheet" href="/static/css/markdown-toolbar.css" type="text/css" />
+<script src="/static/js/libs/commonmark.min.js"></script>
+<script src="/static/js/libs/markdown-toolbar.js"></script>
+<script src="/static/js/pages/admin/view/scenarios.js"></script>
+<script src="/static/js/pages/admin/view/statistics.js"></script>
+<script src="/static/js/pages/anchor.js"></script>
+{% end %}
+
+{% block modals %}
+{% from models.Scenario import Scenario %}
+{% from models.Option import Option %}
+    <!-- Edit Scenario -->
+    <div id="edit-scenario-modal" class="modal hide fade" style="display: none;">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal">&times;</button>
+            <h3><i class="fa fa-fw fa-pencil"></i> {{ _("Edit Scenario") }}</h3>
+        </div>
+        <div class="modal-body">
+            <form id="edit-scenario-form" class="form-horizontal" method="post" action="/admin/edit/scenario" enctype="multipart/form-data">
+                {% raw xsrf_form_html() %}
+                <input id="scenario-uuid" name="uuid" value="" type="hidden" />
+                <div class="control-group">
+                    <label class="control-label" for="scenario_name">{{ _("Scenario Name") }}</label>
+                    <div class="controls">
+                        <input id="scenario-name" name="name" type="text" placeholder="{{ _('Scenario Name') }}" />
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label" for="scenario_description">{{_("Description")}}</label>
+                    <div class="controls">
+                        <textarea rows="4" class="toolbar" id="scenario-description" name="description" placeholder="{{_('Description')}}" ></textarea>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label" for="starter">{{_("Starter")}}</label>
+                    <div class="controls">
+                        <input id="starter" name="starter" type="hidden" value=0 />
+                        <div id="starter-button" class="btn-group" data-toggle="buttons-radio"
+                            rel="popover"
+                            data-original-title="{{_('Starter')}}"
+                            data-content="{{_('Enabling this option will set the scenario as starter.')}}">
+                            <button id="case-enable" type="button" class="btn btn-success">
+                                <i id="case-enable-icon" class="fa fa-fw fa-check-square-o"></i>
+                                {{_("True")}}
+                            </button>
+                            <button id="case-disable" type="button" class="btn btn-danger">
+                                <i id="case-disable-icon" class="fa fa-fw fa-square-o"></i>
+                                {{_("False")}}
+                            </button>
+                        </div>
+                    </div>
+                </div>        
+            </form>
+        </div>
+        <div class="modal-footer">
+            <a href="#" class="btn" data-dismiss="modal">{{ _("Close") }}</a>
+            <button id="edit-scenario-submit" type="button" class="btn btn-primary">
+                <i class="fa fa-fw fa-save"></i>
+                {{_("Save")}}
+            </button>
+        </div>
+    </div>
+    <div id="delete-scenario-modal" class="modal hide fade" style="display: none; ">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal">&times;</button>
+            <h3><i class="fa fa-fw fa-times-circle-o"></i> {{_("Delete Scenario")}}</h3>
+        </div>
+        <div class="modal-body">
+        <p>
+            {{_("Are you sure you want to delete this scenario?")}}
+        </p>
+        <form id="delete-scenario-form" method="post" action="/admin/delete/scenario">
+            {% raw xsrf_form_html() %}
+            <input id="delete-scenario-uuid" name="uuid" type="hidden" value="" />
+        </form>
+        </div>
+        <div class="modal-footer">
+            <a href="#" class="btn" data-dismiss="modal">{{ _("Close") }}</a>
+            <button id="delete-scenario-submit" type="button" class="btn btn-danger">
+                <i class="fa fa-fw fa-times-circle-o"></i>
+                {{_("Delete")}}
+            </button>
+        </div>
+    </div>
+    <!-- Edit Option -->
+    <div id="edit-option-modal" class="modal hide fade" style="display: none; ">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal">&times;</button>
+            <h3><i class="fa fa-fw fa-pencil"></i> {{_("Edit Option")}}</h3>
+        </div>
+        <div class="modal-body">
+            <form id="edit-option-form" class="form-horizontal" method="post" action="/admin/edit/option">
+                {% raw xsrf_form_html() %}
+                <input id="option-uuid" name="uuid" type="hidden" />
+                <div class="control-group">
+                    <label class="control-label" for="option-name">{{_("Option Name")}}</label>
+                    <div class="controls">
+                        <input id="option-name" maxlength="32" name="name" type="text" />
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label" for="edit-option-scenario">{{_("Scenario")}}</label>
+                    <div class="controls">
+                        <select id="edit-option-scenario" name="scenario_uuid">
+                            {% for scenario in Scenario.all() %}
+                                <option value="{{ scenario.uuid }}">{{ scenario.name }}</option>
+                            {% end %}
+                        </select>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label" for="edit-option-next-scenario">{{_("Next Scenario")}}</label>
+                    <div class="controls">
+                        <select id="edit-option-next-scenario" name="next_scenario_uuid">
+                            {% for scenario in Scenario.all() %}
+                                <option value="{{ scenario.uuid }}">{{ scenario.name }}</option>
+                            {% end %}
+                        </select>
+                    </div>
+                </div>                
+                <div class="control-group">
+                    <label class="control-label" for="option-description">{{_("Description")}}</label>
+                    <div class="controls">
+                        <textarea rows="4" class="toolbar" id="option-description" name="description" type="text" placeholder="{{_('Description')}}"></textarea>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <a href="#" class="btn" data-dismiss="modal">{{ _("Close") }}</a>
+            <button id="edit-option-submit" type="button" class="btn btn-primary">
+                <i class="fa fa-fw fa-save"></i>
+                {{_("Save")}}
+            </button>
+        </div>
+    </div>
+    <div id="delete-option-modal" class="modal hide fade" style="display: none; ">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal">&times;</button>
+            <h3><i class="fa fa-fw fa-times-circle-o"></i> {{_("Delete Option")}}</h3>
+        </div>
+        <div class="modal-body">
+        <p>
+            {{_("Are you sure you want to delete this option?")}} <br />
+        </p>
+        <form id="delete-option-form" method="post" action="/admin/delete/option">
+            {% raw xsrf_form_html() %}
+            <input id="delete-option-uuid" name="uuid" type="hidden" value="" />
+        </form>
+        </div>
+        <div class="modal-footer">
+            <a href="#" class="btn" data-dismiss="modal">{{ _("Close") }}</a>
+            <button id="delete-option-submit" type="button" class="btn btn-danger">
+                <i class="fa fa-fw fa-times-circle-o"></i>
+                {{ _("Delete") }}
+            </button>
+        </div>
+    </div>
+{% end %}
+
+{% block content %}
+<div class="container">
+    <h2>
+        <i class="fa fa-road"></i>
+        {{_("Scenario Management")}}
+        <a class="btn btn-primary btn-small" data-toggle="modal" href="/admin/create/scenario">
+            <i class="fa fa-plus"></i>
+            {{_("Add Scenario") }}
+        </a>
+    </h2>
+    <br />
+    {% if success is not None and len(success) != 0  %}
+        {% for message in success %}
+            <div class="alert alert-success">
+                <a class="close" data-dismiss="alert" href="#">&times;</a>
+                <h4 class="alert-heading">{{ _("SUCCESS") }}</h4>
+                {{ message }}
+            </div>
+        {% end %}
+    {% end %}
+    {% if errors != None and len(errors) != 0 %}
+        {% for error in errors %}
+            <div class="alert alert-error">
+                <a class="close" data-dismiss="alert" href="#">&times;</a>
+                <h4 class="alert-heading">{{_("ERROR")}}</h4>
+                {{ error }}
+            </div>
+        {% end %}
+    {% end %}
+    {% if len(Scenario.all()) > 0 %}
+        {% for scenario_index, scenario in enumerate(Scenario.all()) %}
+            <div id="{{ scenario.uuid }}" class="well">
+                <h2 style="display:inline;">
+                    <i class="fa fa-fw fa-plane"></i>
+                    {{ scenario.name }}&nbsp;&nbsp;
+                </h2>
+                <a class="btn btn-primary btn-small" data-toggle="modal" href="/admin/create/option?scenario={{scenario.uuid}}">
+                    <i class="fa fa-plus"></i>
+                    {{_("Add Option") }}
+                </a>
+                <a id="edit-scenario-button{{ scenario_index }}" class="btn btn-small" data-toggle="modal" href="#edit-scenario-modal" data-uuid="{{ scenario.uuid }}" data-name="{{ scenario.name }}" data-description="{{ scenario.description }}" data-starter="{{scenario.starter}}">
+                    <i class="fa fa-fw fa-pencil"></i>
+                    {{_("Edit Scenario")}}
+                </a>
+                <a id="delete-scenario-button{{ scenario_index }}" class="btn btn-small btn-danger" data-toggle="modal" href="#delete-scenario-modal" data-uuid="{{ scenario.uuid }}">
+                    <i class="fa fa-fw fa-times-circle-o"></i>
+                    {{_("Delete Scenario")}}
+                </a>
+                <br />{% if scenario.description %}<br>&nbsp;&nbsp;{{ scenario.description }}<br />{% end %}
+                <br />
+                <div class="startflags">                   
+                    <hr>
+                    {% if len(scenario.options) != 0 %}
+                        <table class="table table-striped sort grid">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>{{_("Name")}}</th>
+                                    <th>{{_("Description")}}</th>
+                                    <th>{{_("Next Scenario")}}</th>
+                                    <th><!-- Edit Button --></th>
+                                    <th><!-- Delete Button --></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for index, option in enumerate(scenario.options) %}
+                                    <tr id="{{ option.uuid }}">
+                                        <td class="index shortcolumn" data-uuid="{{ option.uuid }}">{{ index + 1 }}</td>
+                                        <td class="shortcolumn" style="padding-right: 25px;">{{ option.name }}</td>
+                                        <td class="descriptioncol markdown">{{ option.description }}</td>
+                                        <td class="shortcolumn">{{ option.next_scenario }}</td>
+                                        <td class="shortcolumn">
+                                            <a id="edit-option-button-{{ option.uuid }}" class="btn btn-mini" data-toggle="modal" href="#edit-option-modal" data-uuid="{{ option.uuid }}" data-scenario-uuid="{{ option.scenario.uuid }}" data-name="{{ option.name }}" data-description="{{ option.description }}">
+                                                <i class="fa fa-fw fa-pencil"></i>
+                                                {{_("Edit Option") }}
+                                            </a>
+                                        </td>
+                                        <td class="shortcolumn">
+                                            <a id="delete-option-button-{{ option.uuid }}" class="btn btn-danger btn-mini" data-toggle="modal" href="#delete-option-modal" data-uuid="{{ option.uuid }}">
+                                                <i class="fa fa-fw fa-times-circle-o"></i>
+                                                {{_("Delete")}}
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% end %}
+                            </tbody>
+                        </table>
+                    {% end %}
+                </div>
+            </div>
+        {% end %}
+    {% else %}
+        <strong>{{_("No scenario yet")}}, <a href="/admin/create/scenario">{{_("add some")}}</a></strong>
+    {% end %}
+</div>
+{% end %}

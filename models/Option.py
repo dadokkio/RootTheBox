@@ -30,9 +30,6 @@ from models.Scenario import Scenario
 from models.BaseModels import DatabaseObject
 from libs.ValidationError import ValidationError
 from builtins import str
-from tornado.options import options
-from dateutil.parser import parse
-from past.utils import old_div
 
 
 class Option(DatabaseObject):
@@ -42,8 +39,12 @@ class Option(DatabaseObject):
     """
 
     uuid = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid4()))
-    scenario_id = Column(Integer, ForeignKey("scenario.id"), nullable=False)
-    next_scenario_id = Column(Integer, ForeignKey("scenario.id"), nullable=True)
+    scenario_id = Column(
+        Integer, ForeignKey("scenario.id", ondelete="SET NULL"), nullable=True
+    )
+    next_scenario_id = Column(
+        Integer, ForeignKey("scenario.id", ondelete="SET NULL"), nullable=True
+    )
 
     _name = Column(Unicode(32), nullable=True)
     _description = Column(Unicode(512), nullable=False)
@@ -87,7 +88,7 @@ class Option(DatabaseObject):
     @property
     def order(self):
         if not self._order:
-            self._order = self.box.flags.index(self) + 1
+            self._order = self.scenario.options.index(self) + 1
         return self._order
 
     @order.setter
@@ -132,8 +133,8 @@ class Option(DatabaseObject):
             "uuid": self.uuid,
             "description": self.description,
             "order": self.order,
-            "scenario": scenario,
-            "next_scenario": next_scenario,
+            "scenario": scenario.uuid,
+            "next_scenario": next_scenario.uuid,
         }
 
     def __repr__(self):

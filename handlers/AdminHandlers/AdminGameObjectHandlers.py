@@ -38,6 +38,8 @@ from handlers.MissionsHandler import BoxHandler
 from models.Box import Box, FlagsSubmissionType
 from models.Corporation import Corporation
 from models.Category import Category
+from models.Scenario import Scenario
+from models.Option import Option
 from models.News import News
 from models.GameLevel import GameLevel
 from models.FlagAttachment import FlagAttachment
@@ -72,6 +74,8 @@ class AdminCreateHandler(BaseHandler):
     def get(self, *args, **kwargs):
         """Renders Corp/Box/Flag create pages"""
         box = Box.by_uuid(self.get_argument("box", ""))
+        scenario = Scenario.by_uuid(self.get_argument("scenario", ""))
+        next_scenario = Scenario.by_uuid(self.get_argument("next_scenario", ""))
         game_objects = {
             "corporation": "admin/create/corporation.html",
             "box": "admin/create/box.html",
@@ -86,9 +90,17 @@ class AdminCreateHandler(BaseHandler):
             "team": "admin/create/team.html",
             "category": "admin/create/category.html",
             "news": "admin/create/news.html",
+            "scenario": "admin/create/scenario.html",
+            "option": "admin/create/option.html",
         }
         if len(args) and args[0] in game_objects:
-            self.render(game_objects[args[0]], box=box, errors=None)
+            self.render(
+                game_objects[args[0]],
+                box=box,
+                scenario=scenario,
+                next_scenario=next_scenario,
+                errors=None,
+            )
         else:
             self.render("public/404.html")
 
@@ -110,6 +122,8 @@ class AdminCreateHandler(BaseHandler):
             "team": self.create_team,
             "category": self.create_category,
             "news": self.create_news,
+            "scenario": self.create_scenario,
+            "option": self.create_option,
         }
         if len(args) and args[0] in game_objects:
             game_objects[args[0]]()
@@ -244,6 +258,45 @@ class AdminCreateHandler(BaseHandler):
             self.redirect("/admin/view/news#%s" % news.uuid)
         except ValidationError as error:
             self.render("admin/create/news.html", errors=[str(error)])
+
+    def create_scenario(self):
+        """Create a scenario object"""
+        try:
+            name = self.get_argument("name", "")
+            description = self.get_argument("description", "")
+            starter = self.get_argument("starter", False)
+            scenario = Scenario(name=name, description=description, starter=starter)
+            self.dbsession.add(scenario)
+            self.dbsession.commit()
+            self.redirect("/admin/view/scenarios#%s" % scenario.uuid)
+        except ValidationError as error:
+            self.render("admin/create/scenario.html", errors=[str(error)])
+
+    def create_option(self):
+        """Create a option object"""
+        try:
+            scenario = Scenario.by_uuid(self.get_argument("scenario_uuid", ""))
+            if scenario is None:
+                raise ValidationError("Scenario does not exists")
+            next_scenario = Scenario.by_uuid(self.get_argument("next_scenario_uuid"))
+            name = self.get_argument("option_name", "")
+            description = self.get_argument("description", "")
+            option = Option(
+                name=name,
+                description=description,
+                scenario_id=scenario.id,
+                next_scenario_id=next_scenario.id if next_scenario else None,
+            )
+            self.dbsession.add(option)
+            self.dbsession.commit()
+            self.redirect("/admin/view/scenarios#%s" % option.scenario.uuid)
+        except ValidationError as error:
+            self.render(
+                "admin/create/option.html",
+                errors=[str(error)],
+                scenario=None,
+                next_scenario=None,
+            )
 
     def create_flag_static(self):
         """Create a static flag"""
@@ -413,6 +466,7 @@ class AdminViewHandler(BaseHandler):
             "statistics": "admin/view/statistics.html",
             "notifications": "admin/view/notifications.html",
             "news": "admin/view/news.html",
+            "scenarios": "admin/view/scenarios.html",
         }
         if len(args) and args[0] in uri:
             self.render(uri[args[0]], errors=None, success=None)
@@ -544,6 +598,8 @@ class AdminEditHandler(BaseHandler):
             "market_item": "market_objects",
             "category": "categories",
             "news": "news",
+            "scenario": "scenarios",
+            "option": "scenarios",
         }
         if len(args) and args[0] in uri:
             self.redirect("/admin/view/%s" % uri[args[0]])
@@ -568,6 +624,8 @@ class AdminEditHandler(BaseHandler):
             "flag_order": self.edit_flag_order,
             "level_access": self.edit_level_access,
             "news": self.edit_news,
+            "scenario": self.edit_scenario,
+            "option": self.edit_option,
         }
         if len(args) and args[0] in uri:
             uri[args[0]]()
@@ -966,6 +1024,35 @@ class AdminEditHandler(BaseHandler):
         except ValidationError as error:
             self.render("admin/view/news.html", errors=[str(error)])
 
+    def edit_scenario(self):
+        """Update scenario objects"""
+        try:
+            scenario = Scenario.by_uuid(self.get_argument("uuid", ""))
+            if scenario is None:
+                raise ValidationError("Scenario does not exist")
+            scenario.name = self.get_argument("name", " ")
+            scenario.description = self.get_argument("description", "")
+            scenario.starter = self.get_argument("starter", 0)
+            self.dbsession.add(scenario)
+            self.dbsession.commit()
+            self.redirect("/admin/view/scenarios")
+        except ValidationError as error:
+            self.render("admin/view/scenarios.html", errors=[str(error)])
+
+    def edit_option(self):
+        """Update options objects"""
+        try:
+            option = Option.by_uuid(self.get_argument("uuid", ""))
+            if option is None:
+                raise ValidationError("Option does not exist")
+            option.name = self.get_argument("name", " ")
+            option.description = self.get_argument("description", "")
+            self.dbsession.add(option)
+            self.dbsession.commit()
+            self.redirect("/admin/view/scenarios")
+        except ValidationError as error:
+            self.render("admin/view/scenarios.html", errors=[str(error)])
+
     def box_level(self):
         """Changes a box level"""
         errors = []
@@ -1042,6 +1129,8 @@ class AdminDeleteHandler(BaseHandler):
             "game_level": self.del_game_level,
             "category": self.del_category,
             "news": self.del_news,
+            "scenario": self.del_scenario,
+            "option": self.del_option,
         }
         if len(args) and args[0] in uri:
             uri[args[0]]()
@@ -1154,6 +1243,40 @@ class AdminDeleteHandler(BaseHandler):
             self.render(
                 "admin/view/news.html",
                 errors=["News does not exist in database."],
+            )
+
+    def del_option(self, option=None):
+        """Delete an option object"""
+        option_init = option
+        if option is None:
+            option = Option.by_uuid(self.get_argument("uuid", ""))
+        if option is not None:
+            logging.info("Delete option: %s" % option.name)
+            self.dbsession.delete(option)
+            self.dbsession.commit()
+            self.redirect("/admin/view/scenarios")
+        elif option_init is None:
+            self.render(
+                "admin/view/scenarios.html",
+                success=None,
+                errors=["Option does not exist in database."],
+            )
+
+    def del_scenario(self):
+        """Delete a scenario object"""
+        scenario = Scenario.by_uuid(self.get_argument("uuid", ""))
+        if scenario is not None:
+            options = scenario.options
+            for option in options:
+                self.del_option(option)
+            logging.info("Delete scenario: %s" % scenario.name)
+            self.dbsession.delete(scenario)
+            self.dbsession.commit()
+            self.redirect("/admin/view/scenarios")
+        else:
+            self.render(
+                "admin/view/scenarios.html",
+                errors=["Scenario does not exist in database."],
             )
 
     def del_box(self, box=None):

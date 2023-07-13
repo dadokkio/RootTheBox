@@ -1,0 +1,79 @@
+{% extends "../../main.html" %}
+
+{% block title %}{{_("Create Scenario")}}{% end %}
+
+{% block header %}
+<link rel="stylesheet" href="/static/css/markdown-toolbar.css" type="text/css" />
+<script src="/static/js/libs/commonmark.min.js"></script>
+<script src="/static/js/libs/markdown-toolbar.js"></script>
+<script src="/static/js/pages/admin/create/scenarios.js"></script>
+{% end %}
+
+{% block content %}
+
+<div class="container">
+    <h1>
+        <i class="fa fa-desktop"></i>
+        {{_("Create Scenario")}}
+    </h1>
+    <br />
+    {% if errors is not None and len(errors) != 0 %}
+        {% for error in errors %}
+        <div class="alert alert-error">
+            <a class="close" data-dismiss="alert" href="#">&times;</a>
+            <h4 class="alert-heading">{{_("ERROR")}}</h4>
+            {{ error }}
+        </div>
+        {% end %}
+    {% end %}
+    <div class="well">
+        <form class="form-horizontal" action="/admin/create/scenario" method="post" enctype="multipart/form-data" autocomplete="on">
+            {% raw xsrf_form_html() %}
+            <div class="control-group">
+                <label class="control-label" for="scenario_name">{{_("Scenario Name")}}</label>
+                <div class="controls">
+                    <input autofocus required id="scenario-name" name="name" maxlength="32" type="text" placeholder="{{_('Scenario Name')}}"
+                           rel="popover"
+                           data-original-title="{{_('Scenario Name')}}"
+                           data-content="{{_('What is the name of this Scenario?')}} [3-32 {{_('Characters')}}]">
+                </div>
+            </div>
+            <div class="control-group">
+                <label class="control-label" for="description">{{_("Description")}}</label>
+                <div class="controls">
+                    <textarea class="toolbar" id="description" style="width: 60%;" rows="5" name="description" maxlength="1024" placeholder="{{_('Description')}}"
+                              rel="popover"
+                              data-original-title="{{_('Description')}}"
+                              data-html="true"
+                              data-content="{{_('A brief description of the scenario')}} [Max: 512 {{_('Characters')}}].<br/><br/>{{_('Supports')}} Markdown (GitHub Style)">
+                    </textarea>
+                </div>
+            </div>
+            <div class="control-group">
+                <label class="control-label" for="starter">{{_("Starter")}}</label>
+                <div class="controls">
+                    <input id="starter" name="starter" type="hidden" value=0 />
+                    <div id="starter-button" class="btn-group" data-toggle="buttons-radio"
+                        rel="popover"
+                        data-original-title="{{_('Starter')}}"
+                        data-content="{{_('Enabling this option will set this as first scenario.')}}">
+                        <button id="case-enable" type="button" class="btn btn-success">
+                            <i id="case-enable-icon" class="fa fa-fw fa-square-o"></i>
+                            {{_("True")}}
+                        </button>
+                        <button id="case-disable" type="button" class="btn btn-danger">
+                            <i id="case-disable-icon" class="fa fa-fw fa-check-square-o"></i>
+                            {{_("False")}}
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="control-group">
+                <div class="controls">
+                    <button class="btn btn-primary" type="submit">{{_("Create Scenario")}}</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% end %}

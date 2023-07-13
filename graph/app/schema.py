@@ -23,7 +23,7 @@ class Scenario:
 
 @strawberry_sqlalchemy_mapper.type(models.Option)
 class Option:
-    __exclude__ = ["id", "scenario", "scenario_id", "name"]
+    __exclude__ = ["id", "scenario", "scenario_id", "next_scenario_id", "name"]
 
 
 @strawberry_sqlalchemy_mapper.type(models.User)

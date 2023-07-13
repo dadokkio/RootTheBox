@@ -25,7 +25,7 @@ import xml.etree.cElementTree as ET
 from uuid import uuid4
 from collections import OrderedDict
 from sqlalchemy import Column
-from sqlalchemy.types import Unicode, String, Boolean
+from sqlalchemy.types import Unicode, String, Integer
 from sqlalchemy.orm import relationship, backref
 from libs.ValidationError import ValidationError
 from models import dbsession
@@ -40,7 +40,7 @@ class Scenario(DatabaseObject):
     uuid = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid4()))
     _name = Column(Unicode(32))
     _description = Column(Unicode(512))
-    _starter = Column(Boolean, default=False, nullable=False)
+    _starter = Column(Integer, nullable=True)
     _options = relationship(
         "Option",
         backref=backref("scenario", lazy="select"),
@@ -51,7 +51,7 @@ class Scenario(DatabaseObject):
     @classmethod
     def all(cls):
         """Returns a list of all objects in the database"""
-        return sorted(dbsession.query(cls).all())
+        return dbsession.query(cls).all()
 
     @classmethod
     def count(cls):
@@ -96,6 +96,17 @@ class Scenario(DatabaseObject):
             return ""
         return self._description
 
+    @property
+    def starter(self):
+        return self._starter
+
+    @starter.setter
+    def starter(self, value):
+        if value is None:
+            self._starter = 0
+        else:
+            self._starter = value
+
     @description.setter
     def description(self, value):
         if 512 < len(value):
@@ -121,28 +132,16 @@ class Scenario(DatabaseObject):
         }
 
     def __repr__(self):
-        return "<Scenario - title: %s>" % (self.title,)
+        return "<Scenario - name: %s>" % (self.name,)
 
     def __str__(self):
-        return self.title
+        return self.name
 
     def __eq__(self, other):
         return self.id == other.id
 
     def __ne__(self, other):
         return not self.__eq__(other)
-
-    def __gt__(self, other):
-        return self.__cmp__(other) > 0
-
-    def __lt__(self, other):
-        return self.__cmp__(other) < 0
-
-    def __ge__(self, other):
-        return self.__cmp__(other) >= 0
-
-    def __le__(self, other):
-        return self.__cmp__(other) <= 0
 
     def __hash__(self):
         return hash(self.uuid)
