@@ -29,43 +29,42 @@ CRUD for game objects:
 # pylint: disable=unused-wildcard-import
 
 
+import json
 import logging
 import re
-import json
+from builtins import str
 
 from handlers.BaseHandlers import BaseHandler
 from handlers.MissionsHandler import BoxHandler
+from libs.SecurityDecorators import *
+from libs.StringCoding import decode
+from libs.ValidationError import ValidationError
 from models.Box import Box, FlagsSubmissionType
-from models.Corporation import Corporation
 from models.Category import Category
-from models.Scenario import Scenario
-from models.Option import Option
-from models.News import News
-from models.GameLevel import GameLevel
-from models.FlagAttachment import FlagAttachment
-from models.FlagChoice import FlagChoice
-from models.MarketItem import MarketItem
-from models.Hint import Hint
-from models.Team import Team
-from models.Penalty import Penalty
-from models.IpAddress import IpAddress
-from models.User import ADMIN_PERMISSION
+from models.Corporation import Corporation
 from models.Flag import (
-    Flag,
+    FLAG_CHOICE,
+    FLAG_DATETIME,
     FLAG_FILE,
     FLAG_REGEX,
     FLAG_STATIC,
-    FLAG_DATETIME,
-    FLAG_CHOICE,
+    Flag,
 )
-from libs.ValidationError import ValidationError
-from libs.SecurityDecorators import *
-from libs.StringCoding import decode
-from builtins import str
+from models.FlagAttachment import FlagAttachment
+from models.FlagChoice import FlagChoice
+from models.GameLevel import GameLevel
+from models.Hint import Hint
+from models.IpAddress import IpAddress
+from models.MarketItem import MarketItem
+from models.News import News
+from models.Option import Option
+from models.Penalty import Penalty
+from models.Scenario import Scenario
+from models.Team import Team
+from models.User import ADMIN_PERMISSION
 
 
 class AdminCreateHandler(BaseHandler):
-
     """Handler used to create game objects"""
 
     @restrict_ip_address
@@ -94,13 +93,13 @@ class AdminCreateHandler(BaseHandler):
             "option": "admin/create/option.html",
         }
         if len(args) and args[0] in game_objects:
-            self.render(
-                game_objects[args[0]],
-                box=box,
-                scenario=scenario,
-                next_scenario=next_scenario,
-                errors=None,
-            )
+            if args[0] == "game_level":
+                game_levels = GameLevel.all()
+                self.render(
+                    game_objects[args[0]], game_levels=game_levels, box=box, errors=None
+                )
+            else:
+                self.render(game_objects[args[0]], box=box, errors=None)
         else:
             self.render("public/404.html")
 
@@ -345,7 +344,8 @@ class AdminCreateHandler(BaseHandler):
         try:
             new_level = GameLevel()
             new_level.number = self.get_argument("level_number", "")
-            new_level.buyout = self.get_argument("buyout", 0)
+            new_level.buyout = self.get_argument("buyout", 0) or 0
+            lvl_buyout = self.get_argument("buyoutlvl", 1)
             new_level.name = self.get_argument("name", None)
             new_level.description = self.get_argument("description", "")
             new_level._type = self.get_argument("type", "buyout")
@@ -354,10 +354,13 @@ class AdminCreateHandler(BaseHandler):
                 new_level.buyout = min(new_level.buyout, 100)
             elif new_level._type == "none":
                 new_level.buyout = 0
+            elif new_level._type == "level":
+                new_level.buyout = lvl_buyout
             if (
                 new_level._type != "none"
                 and new_level._type != "hidden"
                 and new_level._type != "locked"
+                and new_level._type != "level"
                 and new_level.buyout == 0
             ):
                 new_level._type = "none"
@@ -375,7 +378,11 @@ class AdminCreateHandler(BaseHandler):
             self.dbsession.commit()
             self.redirect("/admin/view/game_levels")
         except ValidationError as error:
-            self.render("admin/create/game_level.html", errors=[str(error)])
+            self.render(
+                "admin/create/game_level.html",
+                game_levels=game_levels,
+                errors=[str(error)],
+            )
 
     def create_hint(self):
         """Add hint to database"""
@@ -448,7 +455,6 @@ class AdminCreateHandler(BaseHandler):
 
 
 class AdminViewHandler(BaseHandler):
-
     """View game objects"""
 
     @restrict_ip_address
@@ -469,7 +475,13 @@ class AdminViewHandler(BaseHandler):
             "scenarios": "admin/view/scenarios.html",
         }
         if len(args) and args[0] in uri:
-            self.render(uri[args[0]], errors=None, success=None)
+            if args[0] == "game_levels":
+                game_levels = GameLevel.all()
+                self.render(
+                    uri[args[0]], game_levels=game_levels, errors=None, success=None
+                )
+            else:
+                self.render(uri[args[0]], errors=None, success=None)
         else:
             self.render("public/404.html")
 
@@ -578,7 +590,6 @@ class AdminViewHandler(BaseHandler):
 
 
 class AdminEditHandler(BaseHandler):
-
     """Edit game objects"""
 
     @restrict_ip_address
@@ -973,7 +984,9 @@ class AdminEditHandler(BaseHandler):
                 raise ValidationError("Game level does not exist")
             if int(self.get_argument("number", level.number)) != level.number:
                 level.number = self.get_argument("number", "")
-            level.buyout = self.get_argument("buyout", 1)
+
+            level.buyout = self.get_argument("buyout", 1) or 1
+            lvlbuyout = self.get_argument("buyoutlvl", 1)
             level._type = self.get_argument("type", "buyout")
             level._reward = self.get_argument("reward", 0)
             level.name = self.get_argument("name", None)
@@ -982,10 +995,13 @@ class AdminEditHandler(BaseHandler):
                 level.buyout = min(level.buyout, 100)
             elif level._type == "none":
                 level.buyout = 0
+            elif level._type == "level":
+                level.buyout = lvlbuyout
             if (
                 level._type != "none"
                 and level._type != "hidden"
                 and level._type != "locked"
+                and level._type != "level"
                 and level.buyout == 0
             ):
                 level._type = "none"
@@ -1112,7 +1128,6 @@ class AdminEditHandler(BaseHandler):
 
 
 class AdminDeleteHandler(BaseHandler):
-
     """Delete flags/ips from the database"""
 
     @restrict_ip_address
@@ -1338,7 +1353,6 @@ class AdminDeleteHandler(BaseHandler):
 
 
 class AdminAjaxGameObjectDataHandler(BaseHandler):
-
     """Handles AJAX data for admin handlers"""
 
     @restrict_ip_address
@@ -1447,7 +1461,6 @@ class AdminAjaxGameObjectDataHandler(BaseHandler):
 
 
 class AdminTestTokenHandler(BaseHandler):
-
     """Handles token test"""
 
     @restrict_ip_address
