@@ -19,19 +19,14 @@ Created on Mar 11, 2012
     limitations under the License.
 """
 
-
 import binascii
 import enum
-import imghdr
-import io
 import os
 import xml.etree.cElementTree as ET
 from collections import OrderedDict
 from os import urandom
 from uuid import uuid4
 
-from PIL import Image
-from resizeimage import resizeimage
 from sqlalchemy import Column, ForeignKey
 from sqlalchemy.orm import backref, relationship
 from sqlalchemy.types import Boolean, Enum, Integer, String, Unicode
@@ -39,7 +34,7 @@ from tornado.options import options
 
 from libs.StringCoding import decode, encode
 from libs.ValidationError import ValidationError
-from libs.XSSImageCheck import get_new_avatar, is_xss_image
+from libs.XSSImageCheck import get_new_avatar, avatar_validation, save_avatar
 from models import dbsession
 from models.BaseModels import DatabaseObject
 from models.Category import Category
@@ -346,31 +341,15 @@ class Box(DatabaseObject):
 
     @avatar.setter
     def avatar(self, image_data):
+        avatar_path = "upload"
+        if isinstance(image_data, tuple):
+            image_data, avatar_path = image_data
+        ext = avatar_validation(image_data)
         if self.uuid is None:
             self.uuid = str(uuid4())
-        if len(image_data) < (1024 * 1024):
-            ext = imghdr.what("", h=image_data)
-            if ext in ["png", "jpeg", "gif", "bmp"] and not is_xss_image(image_data):
-                try:
-                    if self._avatar is not None and os.path.exists(
-                        options.avatar_dir + "/upload/" + self._avatar
-                    ):
-                        os.unlink(options.avatar_dir + "/upload/" + self._avatar)
-                    file_path = str(
-                        options.avatar_dir + "/upload/" + self.uuid + "." + ext
-                    )
-                    image = Image.open(io.BytesIO(image_data))
-                    cover = resizeimage.resize_cover(image, [500, 250])
-                    cover.save(file_path, image.format)
-                    self._avatar = "upload/" + self.uuid + "." + ext
-                except Exception as e:
-                    raise ValidationError(e)
-            else:
-                raise ValidationError(
-                    "Invalid image format, avatar must be: .png .jpeg .gif or .bmp"
-                )
-        else:
-            raise ValidationError("The image is too large")
+        if avatar_path == "upload":
+            avatar_path = os.path.join(avatar_path, f"{self.uuid}.{ext}")
+        self._avatar = save_avatar(avatar_path, image_data)
 
     @property
     def ipv4s(self):
@@ -410,6 +389,8 @@ class Box(DatabaseObject):
         box_elem = ET.SubElement(parent, "box")
         box_elem.set("gamelevel", "%s" % str(self.game_level.number))
         ET.SubElement(box_elem, "name").text = self.name
+        ET.SubElement(box_elem, "order").text = str(self._order)
+        ET.SubElement(box_elem, "gamelevel").text = str(self.game_level.number)
         ET.SubElement(box_elem, "operatingsystem").text = self._operating_system
         ET.SubElement(box_elem, "description").text = self._description
         ET.SubElement(box_elem, "capture_message").text = self.capture_message
@@ -445,6 +426,8 @@ class Box(DatabaseObject):
         if self.avatar and os.path.isfile(avatarfile):
             with open(avatarfile, mode="rb") as _avatar:
                 data = _avatar.read()
+                if not "upload" in self.avatar:
+                    ET.SubElement(box_elem, "avatar_path").text = self.avatar
                 ET.SubElement(box_elem, "avatar").text = encode(data, "base64")
         else:
             ET.SubElement(box_elem, "avatar").text = "none"

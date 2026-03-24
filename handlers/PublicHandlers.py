@@ -24,7 +24,6 @@ any authentication) with the exception of error handlers and the scoreboard
 
 """
 
-
 import json
 import logging
 import random
@@ -64,7 +63,10 @@ from libs.WebhookHelpers import (
     send_user_registered_webhook,
     send_user_validated_webhook,
 )
-from libs.XSSImageCheck import filter_avatars
+from libs.XSSImageCheck import (
+    filter_avatars,
+    avatar_validation,
+)
 from models import azuread_app
 from models.EmailToken import EmailToken
 from models.GameLevel import GameLevel
@@ -86,7 +88,6 @@ class HomePageHandler(BaseHandler):
 
 
 class CodeFlowHandler(BaseHandler):
-
     """Handles the OIDC code flow response, when using Azure AD authentication"""
 
     azuread_app = azuread_app
@@ -212,7 +213,6 @@ class CodeFlowHandler(BaseHandler):
 
 
 class LoginHandler(BaseHandler):
-
     """Takes care of the login process"""
 
     azuread_app = azuread_app
@@ -375,7 +375,6 @@ class LoginHandler(BaseHandler):
 
 
 class StatusHandler(BaseHandler):
-
     """Status"""
 
     def get(self, *args, **kwargs):
@@ -397,7 +396,6 @@ class StatusHandler(BaseHandler):
 
 
 class RegistrationHandler(BaseHandler):
-
     """Registration Code"""
 
     def get(self, *args, **kwargs):
@@ -488,7 +486,7 @@ class RegistrationHandler(BaseHandler):
             self.get_argument("motto", None)
             and bool(
                 re.match(
-                    r"^[0-9A-Za-z _\-\.%s]{,32}$" % unicodewd,
+                    r"^[\s\S]{0,32}$",
                     self.get_argument("motto", ""),
                     re.UNICODE,
                 )
@@ -496,10 +494,7 @@ class RegistrationHandler(BaseHandler):
             is False
         ):
             raise ValidationError("Invalid Team Motto format")
-        if (
-            User.by_handle(self.get_argument("handle", ""))
-            is not None
-        ):
+        if User.by_handle(self.get_argument("handle", "")) is not None:
             raise ValidationError("This handle is already registered")
         if (
             options.require_email
@@ -510,6 +505,8 @@ class RegistrationHandler(BaseHandler):
             raise ValidationError("Passwords do not match")
         if self.config.use_recaptcha and self.verify_recaptcha() is False:
             raise ValidationError("Invalid reCAPTCHA")
+        if hasattr(self.request, "files") and "avatar" in self.request.files:
+            avatar_validation(self.request.files["avatar"][0]["body"])
 
     def verify_recaptcha(self):
         """Checks recaptcha"""
@@ -655,9 +652,9 @@ class RegistrationHandler(BaseHandler):
             emailtoken = EmailToken()
             emailtoken.user_id = user.id
             emailtoken.value = sha256(email_token).hexdigest()
-            receivers = [user.email]            
-            message = self.create_validate_message(user, email_token)       
-            send_email_message(receivers, message)                 
+            receivers = [user.email]
+            message = self.create_validate_message(user, email_token)
+            send_email_message(receivers, message)
             if not len(options.mail_host) > 0:
                 logging.info(
                     "Email validation failed: No Mail Host in Configuration. Skipping Validation."
@@ -701,7 +698,7 @@ class RegistrationHandler(BaseHandler):
             self.request.headers.get("X-Real-IP")
             or self.request.headers.get("X-Forwarded-For")
             or self.request.remote_ip
-        )        
+        )
         f = open("templates/public/valid_email.html", "r")
         template = (
             f.read()
@@ -713,11 +710,12 @@ class RegistrationHandler(BaseHandler):
             .replace("https://example.com", origin)
         )
         f.close()
-        return get_email_message(create_email_headers(user, "Email Validation"), template)        
+        return get_email_message(
+            create_email_headers(user, "Email Validation"), template
+        )
 
 
 class JoinTeamHandler(BaseHandler):
-
     azuread_app = azuread_app
 
     def get(self, *args, **kwargs):
@@ -811,7 +809,7 @@ class ForgotPasswordHandler(BaseHandler):
             self.dbsession.commit()
             receivers = [user.email]
             message = self.create_reset_message(user, reset_token)
-            send_email_message(receivers, message)            
+            send_email_message(receivers, message)
             logging.info("Password Reset sent for %s" % user.email)
         elif not len(options.mail_host) > 0:
             logging.info("Password Reset request failed: No Mail Host in Settings.")
@@ -844,7 +842,7 @@ class ForgotPasswordHandler(BaseHandler):
             self.request.headers.get("X-Real-IP")
             or self.request.headers.get("X-Forwarded-For")
             or self.request.remote_ip
-        )        
+        )
         f = open("templates/public/reset_email.html", "r")
         template = (
             f.read()
@@ -856,7 +854,7 @@ class ForgotPasswordHandler(BaseHandler):
             .replace("https://example.com", origin)
         )
         f.close()
-        return get_email_message(create_email_headers(user, "Password Reset"), template)        
+        return get_email_message(create_email_headers(user, "Password Reset"), template)
 
 
 class ResetPasswordHandler(BaseHandler):

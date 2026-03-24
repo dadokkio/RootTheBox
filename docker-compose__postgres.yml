@@ -6,7 +6,7 @@ services:
     restart: always
     image: memcached:latest
     ports:
-      - "11211:11211"
+      - "11222:11211"
 
   graphql:
     profiles: [ "graphql" ]

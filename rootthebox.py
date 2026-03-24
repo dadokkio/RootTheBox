@@ -20,7 +20,6 @@ command line arguments it calls various components setup/start/etc.
 """
 # pylint: disable=unused-wildcard-import,unused-variable
 
-
 from __future__ import print_function
 
 import logging
@@ -585,7 +584,7 @@ define("log_sql", default=False, group="database", help="Log SQL queries for deb
 # Memcached settings
 define(
     "memcached",
-    default="127.0.0.1:11211",
+    default="127.0.0.1:11222",
     group="cache",
     help="memcached servers comma separated - hostname:port",
 )

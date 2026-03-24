@@ -11,15 +11,23 @@ http://jklmnn.de/imagejs/
 
 """
 
+import io
 import os
 from random import randint, sample
 from string import printable
+from pathlib import Path
+import imghdr
 
+from PIL import Image
+from resizeimage import resizeimage
 from tornado.options import options
+
+from libs.ValidationError import ValidationError
 
 MAX_AVATAR_SIZE = 1024 * 1024
 MIN_AVATAR_SIZE = 64
 IMG_FORMATS = ["png", "jpeg", "jpg", "gif", "bmp"]
+IMG_SIZE = [500, 250]
 
 
 def is_xss_image(data):
@@ -87,3 +95,55 @@ def existing_avatars(dir):
             if user.avatar is not None:
                 avatars.append(user.avatar)
     return avatars
+
+
+def verify_image_size(image_data):
+    image = Image.open(io.BytesIO(image_data))
+    if image.width < IMG_SIZE[0] or image.height < IMG_SIZE[1]:
+        raise ValidationError(
+            "Image is too small, minimum size %d x %d" % (IMG_SIZE[0], IMG_SIZE[1])
+        )
+
+
+def avatar_validation(image_data) -> str:
+    """Avatar validation check
+
+    Returns image extension as str if checks pass
+    """
+    if MIN_AVATAR_SIZE < len(image_data) < MAX_AVATAR_SIZE:
+        ext = imghdr.what("", h=image_data)
+        if ext in IMG_FORMATS and not is_xss_image(image_data):
+            verify_image_size(image_data)
+            return ext
+        else:
+            raise ValidationError(
+                "Invalid image format, avatar must be: %s" % (", ".join(IMG_FORMATS))
+            )
+
+    else:
+        raise ValidationError(
+            "The image is too large must be %d - %d bytes"
+            % (MIN_AVATAR_SIZE, MAX_AVATAR_SIZE)
+        )
+
+
+def save_avatar(path: str, image_data: bytes) -> str:
+    """
+    Save avatar image to path
+
+    Returns image path without avatar_dir
+    """
+    try:
+        base_path = Path(path)
+        image_path = os.path.join(options.avatar_dir, base_path)
+
+        if os.path.exists(image_path):
+            os.unlink(image_path)
+
+        image = Image.open(io.BytesIO(image_data))
+        cover = resizeimage.resize_cover(image, IMG_SIZE)
+        cover.save(image_path, image.format)
+        return str(base_path)
+
+    except Exception as e:
+        raise ValidationError(e)

@@ -6,25 +6,25 @@ function getCookie(name) {
 
 function getAccess(obj, uuid) {
     $("#edit-" + obj + "-uuid").val(uuid);
-    data = {'uuid': uuid, 'obj': obj, '_xsrf': getCookie("_xsrf")}
-    $.post('/admin/ajax/objects', data, function(response) {
+    data = { 'uuid': uuid, 'obj': obj, '_xsrf': getCookie("_xsrf") }
+    $.post('/admin/ajax/objects', data, function (response) {
         $('#availableList').empty();
         $('#accessList').empty();
         $.each(sortResults(response["available"], 'name', true), function (i, item) {
-            $('#availableList').append($('<option>', { 
+            $('#availableList').append($('<option>', {
                 value: item.uuid,
-                text : item.name 
+                text: item.name
             }));
         });
         $.each(sortResults(response["access"], 'name', true), function (i, item) {
-            $('#accessList').append($('<option>', { 
+            $('#accessList').append($('<option>', {
                 value: item.uuid,
-                text : item.name 
+                text: item.name
             }));
         });
-        $.each(response, function(key, value) {  
-           if (key === "type") {
-                $("#" + obj + "-" + key + ' option[value=' + value + ']').prop('selected',true);
+        $.each(response, function (key, value) {
+            if (key === "type") {
+                $("#" + obj + "-" + key + ' option[value=' + value + ']').prop('selected', true);
             } else {
                 $("#" + obj + "-" + key).val(value);
             }
@@ -33,7 +33,7 @@ function getAccess(obj, uuid) {
 }
 
 function sortResults(item, prop, asc) {
-    item.sort(function(a, b) {
+    item.sort(function (a, b) {
         if (asc) {
             return (a[prop] > b[prop]) ? 1 : ((a[prop] < b[prop]) ? -1 : 0);
         } else {
@@ -45,27 +45,28 @@ function sortResults(item, prop, asc) {
 
 function getDetails(obj, uuid) {
     $("#edit-" + obj + "-uuid").val(uuid);
-    data = {'uuid': uuid, 'obj': obj, '_xsrf': getCookie("_xsrf")}
-    $.post('/admin/ajax/objects', data, function(response) {
+    data = { 'uuid': uuid, 'obj': obj, '_xsrf': getCookie("_xsrf") }
+    $.post('/admin/ajax/objects', data, function (response) {
         $("#buyoutcost").show();
         if (response["number"] === 0) {
-            $("#game_level-type option[value=progress]").prop('disabled',true);
+            $("#game_level-type option[value=progress]").prop('disabled', true);
             if (response["type"] === undefined || response["type"] === "progress" || (response["type"] === 'buyout' && response["buyout"] === 0)) {
                 response["type"] = "none";
                 $("#game_level-type option[value=none]").prop('selected', true);
                 $("#buyout").val(0);
             }
         } else {
-            $("#game_level-type option[value=progress]").prop('disabled',false);
+            $("#game_level-type option[value=progress]").prop('disabled', false);
         }
-        
+
         let type = response["type"];
         if (type === "none" || type == "locked") {
-            $("#buyoutcost").hide();  
+            $("#buyoutcost").hide();
         } else if (type === "level") {
             $("#buyout").hide();
             $("#buyoutlvl").show();
             $("#buyoutlabel").text("Completion of Level");
+            $("#buyoutlvl" + ' option[value=' + response["buyout"] + ']').prop('selected', true);
         } else if (type == "buyout") {
             if (response["buyout"] === 0) {
                 type = "none"
@@ -83,9 +84,9 @@ function getDetails(obj, uuid) {
             $("#buyoutlvl").hide();
         }
 
-        $.each(response, function(key, value) {  
-           if (key === "type") {
-                $("#" + obj + "-" + key + ' option[value=' + value + ']').prop('selected',true);
+        $.each(response, function (key, value) {
+            if (key === "type") {
+                $("#" + obj + "-" + key + ' option[value=' + value + ']').prop('selected', true);
             } else {
                 $("#" + obj + "-" + key).val(value);
             }
@@ -96,7 +97,7 @@ function getDetails(obj, uuid) {
 
 
 /* Add click events */
-$(document).ready(function() {
+$(document).ready(function () {
     $('#addToLevel').click(function () {
         if ($('#availableList option:selected').val() != null) {
             var tempSelect = $('#availableList option:selected').val();
@@ -109,14 +110,14 @@ $(document).ready(function() {
             alert("Before add please select any position.");
         }
     });
-    
+
     $('#removeFromLevel').click(function () {
         if ($('#accessList option:selected').val() != null) {
             var tempSelect = $('#accessList option:selected').val();
             $('#accessList option:selected').remove().appendTo('#availableList');
             $("#accessList").attr('selectedIndex', '-1').find("option:selected").removeAttr("selected");
             $("#availableList").attr('selectedIndex', '-1').find("option:selected").removeAttr("selected");
-          
+
             $("#availableList").val(tempSelect);
             tempSelect = '';
         } else {
@@ -125,51 +126,51 @@ $(document).ready(function() {
     });
 
     /* Game Level */
-    $("a[id^=edit-game-level-button]").click(function() {
+    $("a[id^=edit-game-level-button]").click(function () {
         getDetails("game_level", $(this).data("uuid"));
     });
 
-    $("#edit-game-level-submit").click(function() {
+    $("#edit-game-level-submit").click(function () {
         $("#edit-game-level-form").submit();
     });
 
-    $("button[id^=edit-access-button]").click(function() {
+    $("button[id^=edit-access-button]").click(function () {
         getAccess("access", $(this).data("uuid"));
     });
 
-    $("#edit-access-submit").click(function() {
+    $("#edit-access-submit").click(function () {
         $('#accessList option').prop('selected', true);
         $('#availableList option').prop('selected', true);
         $("#edit-access-form").submit();
     });
 
-    $("a[id^=delete-game-level-button]").click(function() {
-         $("#delete-game-level-uuid").val($(this).data("uuid"));
+    $("a[id^=delete-game-level-button]").click(function () {
+        $("#delete-game-level-uuid").val($(this).data("uuid"));
     });
 
-    $("#delete-game-level-submit").click(function() {
-         $("#delete-game-level-form").submit();
+    $("#delete-game-level-submit").click(function () {
+        $("#delete-game-level-form").submit();
     });
 
-    $("a[id^=lock-level-button]").click(function() {
+    $("a[id^=lock-level-button]").click(function () {
         $("#lock-level-uuid").val($(this).data("uuid"));
         $("#lock-level-form").submit();
     });
 
     /* Switch Level */
-    $("a[id^=switch-level-button]").click(function() {
+    $("a[id^=switch-level-button]").click(function () {
         $("#game-level-uuid").val($(this).data("level-uuid"));
         $("#box-uuid").val($(this).data("box-uuid"));
     });
 
-    $("#switch-level-submit").click(function() {
+    $("#switch-level-submit").click(function () {
         $("#switch-level-form").submit();
     });
 
-    $("#game_level-type").change(function() {
+    $("#game_level-type").change(function () {
         if (this.value === "none" || this.value === "hidden") {
             $("#buyoutcost").hide();
-         } else if (this.value === "buyout") {
+        } else if (this.value === "buyout") {
             $("#buyoutlabel").text("Unlock Cost");
             $("#buyout").attr('max', '');
             $("#buyout").attr('data-original-title', 'Unlock Cost');
@@ -177,15 +178,15 @@ $(document).ready(function() {
             $("#buyoutcost").show();
             $("#buyout").show();
             $("#buyoutlvl").hide();
-         } else if (this.value === "progress") {
-            $("#buyoutlabel").text("% Complete of Level " + $("#game_level-last_level").val());  
+        } else if (this.value === "progress") {
+            $("#buyoutlabel").text("% Complete of Level " + $("#game_level-last_level").val());
             $("#buyout").attr('max', 100);
             $("#buyout").attr('data-original-title', '% Complete of Prior Level');
             $("#buyout").attr('data-content', 'This level will unlock automatically after this percentage of prior level is completed (value 0-100).');
             $("#buyoutcost").show();
             $("#buyout").show();
             $("#buyoutlvl").hide();
-         } else if (this.value === "points") {
+        } else if (this.value === "points") {
             $("#buyoutlabel").text("Score Points Earned");
             $("#buyout").attr('max', '');
             $("#buyout").attr('data-original-title', 'Score Points Earned');
@@ -193,11 +194,11 @@ $(document).ready(function() {
             $("#buyoutcost").show();
             $("#buyout").show();
             $("#buyoutlvl").hide();
-         } else if (this.value === "level") {
+        } else if (this.value === "level") {
             $("#buyoutlabel").text("Completion of Level");
             $("#buyoutcost").show();
             $("#buyoutlvl").show();
             $("#buyout").hide();
-         }
+        }
     });
 });

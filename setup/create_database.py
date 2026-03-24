@@ -17,7 +17,6 @@
     limitations under the License.
 """
 
-
 from models import engine
 from models.BaseModels import DatabaseObject
 
