@@ -27,18 +27,19 @@ from sqlalchemy import Column, ForeignKey, asc
 from sqlalchemy.sql import and_
 from sqlalchemy.types import Integer, String, Unicode
 
+from libs.ValidationError import ValidationError
 from models import dbsession
 from models.BaseModels import DatabaseObject
 
 
 class FlagChoice(DatabaseObject):
-
     """Flag Choice definition"""
 
     uuid = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid4()))
 
     flag_id = Column(Integer, ForeignKey("flag.id"), nullable=False)
     _choice = Column(Unicode(256), nullable=True)
+    _value = Column(Integer, nullable=True)
 
     @classmethod
     def all(cls):
@@ -68,21 +69,21 @@ class FlagChoice(DatabaseObject):
         return dbsession.query(cls).filter(and_(cls.flag_id == flag.id).count())
 
     @classmethod
-    def create_choice(cls, flag=None, item=None):
+    def create_choice(cls, flag=None, item=None, value=0):
         """Create a choice and save it to the database"""
         if not flag:
             flag = cls.flag
         if not item:
             return
-        choice = cls._create(flag, str(item)[:256])
+        choice = cls._create(flag, str(item)[:256], value)
         dbsession.add(choice)
         dbsession.commit()
 
     @classmethod
-    def _create(cls, flag, choice):
+    def _create(cls, flag, choice, value):
         """Create a choice and save it to the database"""
         logging.debug("Creating flag '%s' choice" % (flag.id))
-        return cls(flag_id=flag.id, _choice=choice)
+        return cls(flag_id=flag.id, _choice=choice, _value=value)
 
     @property
     def choice(self):
@@ -92,6 +93,17 @@ class FlagChoice(DatabaseObject):
     def choice(self, value):
         self._choice = value[:256]
 
+    @property
+    def value(self):
+        return str(self._value)
+
+    @value.setter
+    def value(self, value):
+        try:
+            self._value = abs(int(value))
+        except ValueError:
+            raise ValidationError("Reward value must be an integer")
+
     def to_dict(self):
         """Return public data as dict"""
-        return {"uuid": self.uuid, "choice": self.choice}
+        return {"uuid": self.uuid, "choice": self.choice, "value": self.value}

@@ -99,7 +99,21 @@ $(document).ready(function() {
         }
     });
 
+    $(".add-more-g").click(function(){ 
+        var html = $(".copy-g").html();
+        var siblings = $(".after-add-more").siblings(":last");
+        if (siblings.length > 0) {
+            siblings.after(html);
+        } else {
+            $(".after-add-more").after(html);
+        }
+    });
+
     $("body").on("click",".remove",function(){ 
+        $(this).parents(".choice-control-group").remove();
+    });
+
+    $("body").on("click",".remove-g",function(){ 
         $(this).parents(".choice-control-group").remove();
     });
 

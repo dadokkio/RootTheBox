@@ -16,7 +16,7 @@
 {% from models.Penalty import Penalty %}
 {% from models.Flag import Flag %}
 {% from models.Flag import FLAG_FILE %}
-{% from models.Flag import FLAG_CHOICE %}
+{% from models.Flag import FLAG_CHOICE, FLAG_GRADED %}
 {% from models.FlagChoice import FlagChoice %}
 {% from models.Box import FlagsSubmissionType %}
 {% from handlers.MaterialsHandler import has_materials,has_box_materials %}
@@ -344,7 +344,7 @@
                                     {% else %}         
                                         <td class="shortcolumn">
                                             {% if box.flag_submission_type != FlagsSubmissionType.SINGLE_SUBMISSION_BOX or not flag.is_static %}
-                                            <a id="capture-{% if flag.is_file %}file{% elif flag.type == FLAG_CHOICE %}choice{% else %}text{%end%}-flag-button{{ index }}" class="btn btn-mini" data-toggle="modal" href="#capture-{% if flag.is_file %}file{% elif flag.type == FLAG_CHOICE %}choice{% else %}text{% end %}-flag-modal" 
+                                            <a id="capture-{% if flag.is_file %}file{% elif flag.type == FLAG_CHOICE or flag.type == FLAG_GRADED %}choice{% else %}text{%end%}-flag-button{{ index }}" class="btn btn-mini" data-toggle="modal" href="#capture-{% if flag.is_file %}file{% elif flag.type == FLAG_CHOICE or flag.type == FLAG_GRADED %}choice{% else %}text{% end %}-flag-modal" 
                                             data-uuid="{{ flag.uuid }}" data-choices='{{ str(flag.choicelist()) }}'>
                                                 <i class="fa fa-flag"></i>
                                                 {{ _("Submit") }}
@@ -369,7 +369,7 @@
                             {% else %}
                             <td colspan="2" style="border-top: 0px;"></td>
                             {% end %}
-                            <td colspan="{% if team and options.penalize_flag_value %}5{% else %}4{% end %}" class="descriptioncol markdown">{{ flag.description }}{% if flag.type == FLAG_CHOICE %}
+                            <td colspan="{% if team and options.penalize_flag_value %}5{% else %}4{% end %}" class="descriptioncol markdown">{{ flag.description }}{% if flag.type == FLAG_CHOICE or flag.type == FLAG_GRADED %}
                                     {% set choices = FlagChoice.by_flag_id(flag.id) %}
                                     {% if choices and len(choices) > 0 %}{% for item in choices %}- {{item.choice}}
                                     {% end %}{% end %}{% end %}</td>

@@ -45,6 +45,7 @@ from models.Flag import (
     FLAG_CHOICE,
     FLAG_DATETIME,
     FLAG_FILE,
+    FLAG_GRADED,
     FLAG_REGEX,
     FLAG_STATIC,
     Flag,
@@ -83,6 +84,7 @@ class AdminCreateHandler(BaseHandler):
             "flag/static": "admin/create/flag-static.html",
             "flag/datetime": "admin/create/flag-datetime.html",
             "flag/choice": "admin/create/flag-choice.html",
+            "flag/graded": "admin/create/flag-graded.html",
             "game_level": "admin/create/game_level.html",
             "hint": "admin/create/hint.html",
             "team": "admin/create/team.html",
@@ -115,6 +117,7 @@ class AdminCreateHandler(BaseHandler):
             "flag/static": self.create_flag_static,
             "flag/datetime": self.create_flag_datetime,
             "flag/choice": self.create_flag_choice,
+            "flag/graded": self.create_flag_graded,
             "game_level": self.create_game_level,
             "hint": self.create_hint,
             "team": self.create_team,
@@ -324,6 +327,13 @@ class AdminCreateHandler(BaseHandler):
         except ValidationError as error:
             self.render("admin/create/flag-choice.html", errors=[str(error)], box=None)
 
+    def create_flag_graded(self):
+        """Create a graded choice flag"""
+        try:
+            self._mkflag(FLAG_GRADED)
+        except ValidationError as error:
+            self.render("admin/create/flag-graded.html", errors=[str(error)], box=None)
+
     def create_flag_datetime(self):
         """Create a datetime flag"""
         try:
@@ -434,9 +444,11 @@ class AdminCreateHandler(BaseHandler):
         self.dbsession.commit()
 
         choices = self.get_arguments("addmore[]", strip=True)
+        rewards = self.get_arguments("rewards[]", strip=True)
         if choices is not None:
-            for item in choices:
-                FlagChoice.create_choice(flag, item)
+            for i, item in enumerate(choices):
+                reward = 0 if not rewards else rewards[i]
+                FlagChoice.create_choice(flag, item, reward)
 
         self.redirect("/admin/view/game_objects#%s" % box.uuid)
 
@@ -846,7 +858,11 @@ class AdminEditHandler(BaseHandler):
                 )
                 flag.description = description
             # Value
-            flag.value = self.get_argument("value", "")
+            flag_values = self.get_arguments("value")
+            if flag.type == FLAG_GRADED and flag_values:
+                flag.value = flag_values[0]
+            else:
+                flag.value = self.get_argument("value", "")
             flag.capture_message = self.get_argument("capture_message", "")
             flag.case_sensitive = self.get_argument("case-sensitive", 1)
             # Type
@@ -879,7 +895,7 @@ class AdminEditHandler(BaseHandler):
                 raise ValidationError("Box does not exist")
             self.dbsession.add(flag)
             self.dbsession.commit()
-            if flag.type == FLAG_CHOICE:
+            if flag.type in [FLAG_CHOICE, FLAG_GRADED]:
                 self.edit_choices(flag, self.request.arguments)
             self.redirect("/admin/view/game_objects#%s" % box.uuid)
         except ValidationError as error:
@@ -889,30 +905,70 @@ class AdminEditHandler(BaseHandler):
 
     def edit_choices(self, flag, arguments):
         """Edit flag multiple choice items"""
+        if flag.type == FLAG_CHOICE:
+            choice_key = "choice"
+            new_choice_key = "choice"
+            new_choices_rewards = None
+        elif flag.type == FLAG_GRADED:
+            choice_key = "graded"
+            new_choice_key = "graded"
+            # The flag's own value is also named "value" and is submitted first.
+            new_choices_rewards = self.get_arguments("value", strip=True)[1:]
+        else:
+            return
+
         choiceitems = {}
         currentchoices = json.loads(flag.choices())
+
+        # Process existing choices for updates
         for item in arguments:
-            if item.startswith("choice"):
-                if arguments[item][0] != "":
-                    uuidsplit = item.split("uuid-")
-                    if len(uuidsplit) > 1:
-                        choiceitems[uuidsplit[1]] = arguments[item][0]
-                    else:
-                        for flagoption in arguments[item]:
-                            if len(flagoption) > 0:
-                                # add choice
-                                FlagChoice.create_choice(flag, decode(flagoption))
+            if item.startswith(f"{choice_key}-uuid-"):
+                uuid = item.replace(f"{choice_key}-uuid-", "")
+                choice_text = arguments[item][0]
+                if choice_text:
+                    choice_value = 0
+                    if flag.type == FLAG_GRADED:
+                        value_key = f"value-uuid-{uuid}"
+                        try:
+                            choice_value = int(arguments.get(value_key, [0])[0])
+                        except (ValueError, IndexError):
+                            choice_value = 0
+                    choiceitems[uuid] = {"choice": choice_text, "value": choice_value}
+
+        # Process deletions
         for choice in currentchoices:
-            if not choice["uuid"] in choiceitems:
-                # delete choice
+            if choice["uuid"] not in choiceitems:
                 flagchoice = FlagChoice.by_uuid(choice["uuid"])
                 self.dbsession.delete(flagchoice)
-        for choice in choiceitems:
-            flagchoice = FlagChoice.by_uuid(choice)
-            if choiceitems[choice] != flagchoice.choice:
-                # update choice
-                flagchoice.choice = decode(choiceitems[choice])
+
+        # Process updates
+        for uuid, data in choiceitems.items():
+            flagchoice = FlagChoice.by_uuid(uuid)
+            if flagchoice.choice != data["choice"] or (
+                flag.type == FLAG_GRADED and flagchoice.value != data["value"]
+            ):
+                flagchoice.choice = decode(data["choice"])
+                if flag.type == FLAG_GRADED:
+                    flagchoice.value = data["value"]
                 self.dbsession.add(flagchoice)
+
+        # Process new choices
+        if new_choice_key in arguments:
+            new_choices = self.get_arguments(new_choice_key, strip=True)
+            for i, choice_text in enumerate(new_choices):
+                if choice_text:
+                    reward = 0
+                    if (
+                        flag.type == FLAG_GRADED
+                        and new_choices_rewards
+                        and i < len(new_choices_rewards)
+                    ):
+                        try:
+                            reward = int(new_choices_rewards[i])
+                        except (ValueError, IndexError):
+                            pass  # Keep reward 0
+                    FlagChoice.create_choice(flag, decode(choice_text), reward)
+
         self.dbsession.commit()
 
     def edit_ip(self):

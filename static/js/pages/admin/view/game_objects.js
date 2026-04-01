@@ -50,7 +50,7 @@ function getDetails(obj, uuid) {
                 } else {
                     $('#edit-flag-lock option[value=""]').prop('selected',true);
                 }
-            } else if (obj === "flag" && key === "choices") {
+            } else if (obj === "flag" && key === "choices" && response.flagtype == "choice") {
                 var token = response["token"];
                 var choices = $.parseJSON(value);
                 var appendarea = $(".after-add-more");
@@ -82,6 +82,33 @@ function getDetails(obj, uuid) {
                     $('input[name^=choice]').change(function(){
                         $("#flag-token").val($('input[name=multichoice]:checked').next('input').val());
                     });
+                }  
+            } else if (obj === "flag" && key === "choices" && response.flagtype == "graded") {
+                var token = response["token"];
+                var choices = $.parseJSON(value);
+                var appendarea = $(".after-add-more-g");
+                appendarea.nextAll().remove();
+                if (choices.length > 0) {
+                    for (var i=0; i < choices.length; i++){
+                        var html = $(".copy-g").html();
+                        if (i === 0) {
+                            var item = appendarea;
+                        } else if (i === 1) { 
+                            var newadd = appendarea.after(html);
+                            var item = $(newadd.next());
+                        } else {
+                            var newadd = appendarea.siblings(":last").after(html);
+                            var item = $(newadd.next());
+                        }
+                        var textbox = item.find("input[name^=graded]");
+                        $(textbox).val(choices[i].choice);
+                        $(textbox).prop("name", "graded-uuid-" + choices[i].uuid + "");
+                        $(textbox).prop("uuid", choices[i].uuid);
+                        var gradedvalue = item.find("input[name^=value]");
+                        $(gradedvalue).val(choices[i].value);
+                        $(gradedvalue).prop("name", "value-uuid-" + choices[i].uuid + "");
+                        $(gradedvalue).prop("value", choices[i].value);                        
+                    }
                 }  
             } else if (obj === "flag" && key === "name") {
                 // Leave name value blank if it's auto-generated based on order
@@ -273,11 +300,18 @@ $(document).ready(function() {
         if ($(this).data("flagtype") === "choice") {
             $("#testflaggroup").hide();
             $("#flagtokengroup").hide();
+            $("#gradedgroup").hide();
             $("#choicegroup").show();
+        } else if ($(this).data("flagtype") === "graded") {
+            $("#testflaggroup").hide();
+            $("#flagtokengroup").hide();
+            $("#choicegroup").hide();
+            $("#gradedgroup").show();
         } else {
             $("#testflaggroup").show();
             $("#flattokengroup").show();
             $("#choicegroup").hide();
+            $("#gradedgroup").hide();
         }
     });
 
@@ -318,8 +352,20 @@ $(document).ready(function() {
             $(".after-add-more").after(html);
         }
     });
+    $(".add-more-g").click(function(){
+        var html = $(".copy-g").html();
+        var siblings = $(".after-add-more-g").siblings(":last");
+        if (siblings.length > 0) {
+            siblings.after(html);
+        } else {
+            $(".after-add-more").after(html);
+        }
+    });
 
     $("body").on("click",".remove",function(){ 
+        $(this).parents(".choice-control-group").remove();
+    });
+    $("body").on("click",".remove-g",function(){ 
         $(this).parents(".choice-control-group").remove();
     });
 

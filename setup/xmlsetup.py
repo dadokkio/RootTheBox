@@ -23,7 +23,6 @@ It reads an XML file(s) and calls the API based on the it's contents.
 """
 # pylint: disable=unused-wildcard-import
 
-
 import binascii
 import logging
 from base64 import b64decode
@@ -88,7 +87,7 @@ def create_levels(levels):
     for index, level_elem in enumerate(levels):
         # GameLevel 0 is created automatically by the bootstrap
         try:
-            number = get_child_text(level_elem, "number")            
+            number = get_child_text(level_elem, "number")
             if GameLevel.by_number(number) is None:
                 game_level = GameLevel()
                 game_level.number = int(number)
@@ -117,14 +116,18 @@ def create_levels(levels):
         if index + 1 < len(game_levels):
             game_level.next_level_id = game_levels[index + 1].id
             logging.info("%r -> %r" % (game_level, game_levels[index + 1]))
-            missing_buyout_level = missing_level_buyouts.get(game_level.number, None)            
+            missing_buyout_level = missing_level_buyouts.get(game_level.number, None)
             if missing_buyout_level:
-                logging.info(f"attempting update for level {game_level.id} buyout after level {missing_buyout_level}")
+                logging.info(
+                    f"attempting update for level {game_level.id} buyout after level {missing_buyout_level}"
+                )
                 buyoutlevel = GameLevel.by_number(missing_buyout_level)
-                if buyoutlevel:                    
+                if buyoutlevel:
                     game_level.buyout = buyoutlevel.id
-                    logging.info(f"game_level {game_level.id} buyout {missing_buyout_level} -> {buyoutlevel.id}")
-            
+                    logging.info(
+                        f"game_level {game_level.id} buyout {missing_buyout_level} -> {buyoutlevel.id}"
+                    )
+
             # dbsession.add(game_level)
     dbsession.commit()
 
@@ -173,7 +176,7 @@ def create_flags(parent, box):
                 depend = get_child_text(flag_elem, "depends_on", None)
                 if depend:
                     flag_dependency.append({"flag": flag, "name": depend})
-                if flag.type == "choice":
+                if flag.type in ["choice", "graded"]:
                     create_choices(get_child_by_tag(flag_elem, "flag_choices"), flag)
                 create_hints(get_child_by_tag(flag_elem, "hints"), box, flag)
             except:
@@ -214,6 +217,8 @@ def create_choices(parent, flag):
         try:
             choice = FlagChoice(flag_id=flag.id)
             choice.choice = choice_elem.text
+            val = choice_elem.get("value")
+            choice.value = val if val is not None else 0
             dbsession.add(choice)
         except:
             logging.exception("Failed to import choice #%d in flag" % (index + 1))
@@ -249,9 +254,10 @@ def create_boxes(parent, corporation):
                     box._order = int(box_order)
                 if get_child_text(box_elem, "avatar", "none") != "none":
                     avatar_path = get_child_text(box_elem, "avatar_path", "upload")
-                    box.avatar = (bytearray(
-                        b64decode(get_child_text(box_elem, "avatar"))
-                    ), avatar_path)
+                    box.avatar = (
+                        bytearray(b64decode(get_child_text(box_elem, "avatar"))),
+                        avatar_path,
+                    )
                 box.garbage = get_child_text(
                     box_elem, "garbage", binascii.hexlify(urandom(16)).decode()
                 )
@@ -323,38 +329,40 @@ def update_configuration(config):
         except BaseException as e:
             logging.exception("Failed to update configuration (%s)" % e)
     save_config()
-    
+
+
 def check_import_options(options):
     """Check and handle import options based on XML data"""
-    
+
     # User can add the following to the XML <import_options clear_levels="1" clear_corps="1" />
     if options is None:
         return
-    
+
     try:
         clear_levels = int(options.get("clear_levels", "0"))
     except:
         clear_levels = 0
         pass
-    
+
     if clear_levels == 1:
         logging.info("Clearing Levels Before Import")
         game_levels = GameLevel.all()
         for level in game_levels:
             dbsession.delete(level)
         dbsession.commit()
-    
+
     try:
         clear_corps = int(options.get("clear_corps", "0"))
     except:
         clear_corps = 0
-    
+
     if clear_corps == 1:
         logging.info("Clearing Corporations Before Import")
         corps = Corporation.all()
         for corp in corps:
             dbsession.delete(corp)
         dbsession.commit()
+
 
 def _xml_file_import(filename):
     """Parse and import a single XML file"""

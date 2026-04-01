@@ -15,6 +15,7 @@ from models.Flag import (
     FLAG_CHOICE,
     FLAG_DATETIME,
     FLAG_FILE,
+    FLAG_GRADED,
     FLAG_REGEX,
     FLAG_STATIC,
     Flag,
@@ -168,6 +169,14 @@ class TestFlag(unittest.TestCase):
         )
         self.choice_flag = Flag.create_flag(
             _type=FLAG_CHOICE,
+            box=self.box,
+            name="Choice Flag",
+            raw_token=encode("fdata"),
+            description="A choice test token",
+            value=400,
+        )
+        self.choice_flag = Flag.create_flag(
+            _type=FLAG_GRADED,
             box=self.box,
             name="Choice Flag",
             raw_token=encode("fdata"),

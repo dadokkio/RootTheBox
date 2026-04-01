@@ -20,7 +20,7 @@
 {% from models.Box import Box %}
 {% from models.GameLevel import GameLevel %}
 {% from models.Flag import Flag, FLAG_TYPES %}
-{% from models.Flag import FLAG_CHOICE %}
+{% from models.Flag import FLAG_CHOICE, FLAG_GRADED %}
 {% from models.FlagChoice import FlagChoice %}
     {% set avatars = filter_avatars("box") %}
     <!-- Lock Corp Form -->
@@ -397,6 +397,18 @@
                         </div>
                     </div>
                 </div>
+                <div id="gradedgroup" class="control-group" style="margin-bottom: 10px;">
+                    <label class="control-label" for="token" style="margin-left: -20px;">{{_("Graded Choices") }}</label>
+                    <div class="controls">
+                        <div class="input-group control-group after-add-more-g" style="position: relative; margin-bottom: 10px;">
+                            <input type="text" name="graded" maxlength="256" class="form-control" placeholder="{{_('Enter Choice')}}">
+                            <input type="number" name="value" class="form-control" placeholder="{{_('Enter Value')}}">
+                            <div class="input-group-btn" style="position: absolute; left: 228px; top: 0px;"> 
+                                <button class="btn btn-success add-more-g" type="button"style="padding: 4px 10px 0px; vertical-align: middle;"><i class="fa fa-plus" style="font-size: 160%;"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>                
                  <!-- Copy Fields -->
                 <div class="copy hide">
                     <div class="choice-control-group input-group" style="margin-bottom: 10px; position: relative;">
@@ -406,6 +418,15 @@
                         </div>
                     </div>
                 </div>
+                <div class="copy-g hide">
+                    <div class="choice-control-group input-group" style="margin-bottom: 10px; position: relative;">
+                        <input type="text" name="graded" maxlength="256" class="form-control" placeholder="{{_('Enter Choice')}}">
+                        <input type="number" name="value" class="form-control" placeholder="{{_('Enter Value')}}">
+                        <div class="input-group-btn" style="position: absolute; left: 228px; top: 0px;"> 
+                            <button class="btn btn-danger remove-g" type="button" style="padding: 3px 10px 1px; vertical-align: middle;"><i class="fa fa-times" style="font-size: 160%;"></i></button>
+                        </div>
+                    </div>
+                </div>                
                 <div class="control-group">
                     <label class="control-label" for="edit-flag-lock">{{_("Dependent Flag")}}</label>
                     <div class="controls">
@@ -872,10 +893,17 @@
                                                             <td class="index shortcolumn" data-uuid="{{ flag.uuid }}">{{ index + 1 }}</td>
                                                             <td class="shortcolumn" style="padding-right: 0px;">{% if flag.lock_id and Flag.by_id(flag.lock_id) %}<i class="fa fa-lock" title="Locked by {{ Flag.by_id(flag.lock_id).name }}"></i>{% end %}</td>
                                                             <td class="shortcolumn" style="padding-right: 25px;">{{ flag.name }}</td>
-                                                            <td class="descriptioncol markdown">{{ flag.description }}{% if flag.type == FLAG_CHOICE %}
-                                                                {% set choices = FlagChoice.by_flag_id(flag.id) %}
-                                                                {% if choices and len(choices) > 0 %}{% for item in choices %}- {{item.choice}}
-                                                                {% end %}{% end %}{% end %}</td>
+                                                            <td class="markdown">
+                                                                {{ flag.description }}
+                                                                {% if flag.type == FLAG_CHOICE or flag.type == FLAG_GRADED %}
+                                                                    {% set choices = FlagChoice.by_flag_id(flag.id) %}
+                                                                    {% if choices and len(choices) > 0 %}
+                                                                        {% for item in choices %}
+                                                                            - {{item.choice}}{% if flag.type == FLAG_GRADED %} - Value: {{item.value}} {% end %}
+                                                                        {% end %}
+                                                                    {% end %}
+                                                                {% end %}
+                                                            </td>
                                                             <td><div class="wordbreak">{{ flag.token }}</div></td>
                                                             <td class="shortcolumn" style="text-align: center;">{% if options.banking %}${% end %}{{ flag.value }}</td>
                                                             <td class="shortcolumn">{{ str(flag.type) }}</td>
