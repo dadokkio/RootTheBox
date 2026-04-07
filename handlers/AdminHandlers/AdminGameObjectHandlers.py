@@ -858,11 +858,7 @@ class AdminEditHandler(BaseHandler):
                 )
                 flag.description = description
             # Value
-            flag_values = self.get_arguments("value")
-            if flag.type == FLAG_GRADED and flag_values:
-                flag.value = flag_values[0]
-            else:
-                flag.value = self.get_argument("value", "")
+            flag.value = self.get_argument("value", 0)
             flag.capture_message = self.get_argument("capture_message", "")
             flag.case_sensitive = self.get_argument("case-sensitive", 1)
             # Type
@@ -928,7 +924,7 @@ class AdminEditHandler(BaseHandler):
                 if choice_text:
                     choice_value = 0
                     if flag.type == FLAG_GRADED:
-                        value_key = f"value-uuid-{uuid}"
+                        value_key = f"reward-uuid-{uuid}"
                         try:
                             choice_value = int(arguments.get(value_key, [0])[0])
                         except (ValueError, IndexError):
@@ -950,13 +946,15 @@ class AdminEditHandler(BaseHandler):
                 flagchoice.choice = decode(data["choice"])
                 if flag.type == FLAG_GRADED:
                     flagchoice.value = data["value"]
+                else:
+                    flagchoice.value = 0
                 self.dbsession.add(flagchoice)
 
         # Process new choices
         if new_choice_key in arguments:
             new_choices = self.get_arguments(new_choice_key, strip=True)
             for i, choice_text in enumerate(new_choices):
-                if choice_text:
+                if choice_text and len(choice_text.strip()) > 0:
                     reward = 0
                     if (
                         flag.type == FLAG_GRADED

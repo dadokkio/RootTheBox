@@ -104,9 +104,9 @@ function getDetails(obj, uuid) {
                         $(textbox).val(choices[i].choice);
                         $(textbox).prop("name", "graded-uuid-" + choices[i].uuid + "");
                         $(textbox).prop("uuid", choices[i].uuid);
-                        var gradedvalue = item.find("input[name^=value]");
+                        var gradedvalue = item.find("input[name^=reward]");
                         $(gradedvalue).val(choices[i].value);
-                        $(gradedvalue).prop("name", "value-uuid-" + choices[i].uuid + "");
+                        $(gradedvalue).prop("name", "reward-uuid-" + choices[i].uuid + "");
                         $(gradedvalue).prop("value", choices[i].value);                        
                     }
                 }  

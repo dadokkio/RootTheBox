@@ -23,7 +23,6 @@ This file contains the code for displaying flags / recv flag submissions
 
 """
 
-
 import json
 import logging
 from builtins import next, str
@@ -196,7 +195,15 @@ class BoxHandler(BaseHandler):
                     flag, info=["No flag was provided - try again."]
                 )
                 return
-            old_reward = flag.dynamic_value(user.team) if flag is not None else 0
+            old_reward = 0
+            if flag is not None:
+                if flag.type == "graded":
+                    for choice in flag.flag_choice:
+                        if choice.choice == submission:
+                            old_reward = choice.value
+                            break
+                else:
+                    old_reward = flag.dynamic_value(user.team)
             if flag is not None and self.attempt_capture(flag, submission):
                 self.add_content_policy("script", "'unsafe-eval'")
                 success = self.success_capture(user, flag, old_reward)
@@ -414,9 +421,17 @@ class BoxHandler(BaseHandler):
         )
         if submission is not None and flag not in team.flags:
             if flag.capture(submission):
-                flag_value = flag.dynamic_value(team)
+                if flag.type == "graded":
+                    flag_value = 0
+                    for choice in flag.flag_choice:
+                        if choice.choice == submission:
+                            flag_value = choice.value
+                            break
+                else:
+                    flag_value = flag.dynamic_value(team)
                 if (
-                    options.dynamic_flag_value
+                    flag.type != "graded"
+                    and options.dynamic_flag_value
                     and options.dynamic_flag_type == "decay_all"
                 ):
                     for item in Flag.team_captures(flag.id):

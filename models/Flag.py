@@ -267,6 +267,8 @@ class Flag(DatabaseObject):
         return hashlib.sha1(data).hexdigest()
 
     def dynamic_value(self, team=None):
+        if self._type == FLAG_GRADED:
+            return f"{self.max_choices_values()} *"
         if options.dynamic_flag_value is False:
             return self.value
         elif len(self.team_captures(self.id)) == 0:
@@ -441,6 +443,16 @@ class Flag(DatabaseObject):
                     choices.append(flagchoice.to_dict())
         return json.dumps(choices)
 
+    def max_choices_values(self):
+        max_value = 0
+        if self._type == FLAG_GRADED:
+            choicelist = FlagChoice.by_flag_id(self.id)
+            if choicelist is not None and len(choicelist) > 0:
+                for flagchoice in choicelist:
+                    if flagchoice.value > max_value:
+                        max_value = flagchoice.value
+        return max_value
+
     def choicelist(self):
         # excludes the choice uuid
         choices = []
@@ -469,8 +481,10 @@ class Flag(DatabaseObject):
             return pattern.match(submission) is not None
         elif self._type == FLAG_FILE:
             return self.token == self.digest(submission)
-        elif self._type in [FLAG_CHOICE, FLAG_GRADED]:
+        elif self._type == FLAG_CHOICE:
             return self.token == submission
+        elif self._type == FLAG_GRADED:
+            return True
         elif self._type == FLAG_DATETIME:
             try:
                 return parse(self.token) == parse(submission)
