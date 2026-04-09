@@ -77,11 +77,7 @@ class DatabaseConnection(object):
         python lib 'pypostgresql'
         """
         logging.debug("Configured to use Postgresql for a database")
-        try:
-            import postgresql
-        except ImportError:
-            print(WARN + "You must install 'pypostgresql'")
-            os._exit(1)
+        logging.debug("Using psycopg2cffi as postgresql driver")
         db_host, db_port, db_name, db_user, db_password = self._db_credentials()
         postgres = "postgresql://%s:%s@%s:%d/%s" % (
             db_user,
@@ -190,3 +186,4 @@ class DatabaseConnection(object):
                 % (WARN + bold + R, W, WARN)
             )
         return db_host, db_port, db_name, db_user, db_password
+

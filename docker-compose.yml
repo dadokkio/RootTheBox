@@ -1,14 +1,68 @@
-version: "3"
 services:
   memcached:
+    hostname: memcached
+    restart: always
     image: memcached:latest
-    ports:
-      - "11211:11211"
+      #ports:
+      #- "11221:11211"
   webapp:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    hostname: webapp
     ports:
-      - "8888:8888"
+      - "127.0.0.1:8888:8888"
     volumes:
       - ./files:/opt/rtb/files:rw
-    environment:
-      - COMPOSE_CONVERT_WINDOWS_PATHS=1
+    env_file:
+      - rtb.env
+    restart: always
+    depends_on:
+      memcached:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      webapp_start:
+        condition: service_completed_successfully
+  webapp_start:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint: [ "/usr/local/bin/pypy3", "/opt/rtb/rootthebox.py", "--setup=docker" ]
+    volumes:
+      - ./files:/opt/rtb/files:rw
+    env_file:
+      - rtb.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+  postgres:
+    image: postgres:14.1-alpine
+    hostname: postgres
+    restart: always
+    env_file:
+      - rtb.env
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+        #    ports:
+        #- '5432:5432'
+    volumes:
+      - /opt/postgresql/data:/var/lib/postgresql/data
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /opt/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - /opt/certs:/etc/nginx/certs:ro
+    depends_on:
+      - webapp
+    restart: unless-stopped        

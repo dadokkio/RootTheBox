@@ -29,6 +29,15 @@ import sys
 from builtins import input, str
 from datetime import datetime
 
+# --- TRUCCO DI COMPATIBILITÀ PER PYPY ---
+try:
+    from psycopg2cffi import compat
+    compat.register()
+    # Questo inganna RTB facendogli credere che 'psycopg2' sia installato
+except ImportError:
+    pass
+# ----------------------------------------
+
 import nose
 from tornado.options import define, options
 
