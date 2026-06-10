@@ -240,7 +240,8 @@
                                                         <td style="width: 40%; padding-right: 25px;" title="{{flag.description}}">{{ flag.name }}</td>
                                                         <td class="shortcolumn" style="text-align: center;">{% if captures > 0 %}{{ int(float(captures) / float(teamcount) * 100) }}%{% else %}0%{% end %}</td>
                                                         <td class="shortcolumn" style="text-align: center;{% if captures > 0 %} color: green;{% end %}">{{ captures }}</td>
-                                                        <td class="shortcolumn" style="text-align: center;{% if len(Penalty.by_flag_id(flag.id)) > 0 %} color: rgb(200, 0, 0);{% end %}">{{ len(Penalty.by_flag_id(flag.id)) }}</td>
+                                                        {% set penalties = 0 if flag.type == 'graded' else len(Penalty.by_flag_id(flag.id)) %}
+                                                        <td class="shortcolumn" style="text-align: center;{% if penalties > 0 %} color: rgb(200, 0, 0);{% end %}">{{ penalties }}</td>
                                                         <td class="shortcolumn" style="text-align: center;{% if len(Hint.taken_by_flag(flag.id)) > 0 %} color: rgb(200, 200, 0);{% end %}">{{ len(Hint.taken_by_flag(flag.id)) }}</td>
                                                         
                                                         <td class="shortcolumn">

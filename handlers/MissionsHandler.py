@@ -427,6 +427,7 @@ class BoxHandler(BaseHandler):
                         if choice.choice == submission:
                             flag_value = choice.value
                             break
+                    Penalty.create_attempt(user=user, flag=flag, submission=submission)
                 else:
                     flag_value = flag.dynamic_value(team)
                 if (

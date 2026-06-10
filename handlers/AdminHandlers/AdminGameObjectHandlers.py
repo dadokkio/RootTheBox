@@ -1447,7 +1447,23 @@ class AdminAjaxGameObjectDataHandler(BaseHandler):
                 for item in Flag.team_captures(flag.id):
                     team = Team.by_id(item[0])
                     if team:
-                        captures.append({"name": team.name})
+                        entry = {"name": team.name}
+                        if flag.type == "graded":
+                            penalties = Penalty.by_team_flag_id(team.id, flag.id)
+                            token = penalties[0].token if penalties else ""
+                            score = ""
+                            for choice in flag.flag_choice:
+                                if choice.choice == token:
+                                    score = choice.value
+                                    break
+                            if score != "":
+                                if options.banking:
+                                    score = "$" + str(score)
+                                else:
+                                    score = str(score) + " points"
+                            entry["token"] = token
+                            entry["price"] = score
+                        captures.append(entry)
                 attempts = self.attempts(flag)
                 hints = []
                 for item in Hint.taken_by_flag(flag.id):
@@ -1488,6 +1504,8 @@ class AdminAjaxGameObjectDataHandler(BaseHandler):
 
     def attempts(self, flag):
         attempts = []
+        if flag.type == "graded":
+            return attempts
         for item in Penalty.by_flag_id(flag.id):
             team = Team.by_id(item.team_id)
             user_uuid = ""
