@@ -1451,18 +1451,18 @@ class AdminAjaxGameObjectDataHandler(BaseHandler):
                         if flag.type == "graded":
                             penalties = Penalty.by_team_flag_id(team.id, flag.id)
                             token = penalties[0].token if penalties else ""
-                            score = ""
+                            score = None
                             for choice in flag.flag_choice:
                                 if choice.choice == token:
                                     score = choice.value
                                     break
-                            if score != "":
+                            if score is not None:
                                 if options.banking:
                                     score = "$" + str(score)
                                 else:
                                     score = str(score) + " points"
+                                entry["price"] = score
                             entry["token"] = token
-                            entry["price"] = score
                         captures.append(entry)
                 attempts = self.attempts(flag)
                 hints = []
