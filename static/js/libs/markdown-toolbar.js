@@ -53,6 +53,11 @@
             rendered = emoji.replace_colons(rendered);
         }
         rendered = rendered.replaceAll('<a href=', '<a target="_blank" href=');
+        rendered = rendered.replace(/\[spawn:([a-z0-9_-]+)\]/g, function(match, challenge) {
+            return '<iframe src="/spawner/launch?challenge=' + challenge + '" '
+                 + 'style="width:100%;height:240px;border:none;border-radius:8px" '
+                 + 'loading="lazy"></iframe>';
+        });
         return rendered;
     };
 

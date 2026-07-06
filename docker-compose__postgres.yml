@@ -1,28 +1,10 @@
-version: "3"
 services:
-
   memcached:
     hostname: memcached
     restart: always
     image: memcached:latest
-    ports:
-      - "11222:11211"
-
-  graphql:
-    profiles: [ "graphql" ]
-    build:
-      context: graph
-      dockerfile: Dockerfile
-    hostname: graphql
-    restart: always
-    ports:
-      - "7007:7007"
-    env_file:
-      - rtb.env
-    volumes:
-      - ./files/avatars:/avatars:rw
-    depends_on:
-      - webapp
+      #ports:
+      #- "11221:11211"
 
   webapp:
     build:
@@ -30,7 +12,7 @@ services:
       dockerfile: Dockerfile
     hostname: webapp
     ports:
-      - "8888:8888"
+      - "127.0.0.1:8888:8888"
     volumes:
       - ./files:/opt/rtb/files:rw
     env_file:
@@ -48,7 +30,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    entrypoint: [ "python3", "/opt/rtb/rootthebox.py", "--setup=docker" ]
+    entrypoint: [ "/usr/local/bin/pypy3", "/opt/rtb/rootthebox.py", "--setup=docker" ]
     volumes:
       - ./files:/opt/rtb/files:rw
     env_file:
@@ -72,27 +54,48 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    ports:
-      - '5432:5432'
+        #    ports:
+        #- '5432:5432'
     volumes:
-      - db:/var/lib/postgresql/data
+      - /opt/postgresql/data:/var/lib/postgresql/data
 
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    hostname: pgadmin
-    env_file:
-      - rtb.env
-    ports:
-      - 15432:80
+  spawner:
+    build:
+      context: ../spawner
+      dockerfile: Dockerfile
+    hostname: spawner
+    restart: unless-stopped
+    environment:
+      SQLI_IMAGE: "ctf-sqli:latest"
+      INSTANCE_TTL: "3600"
+      CTF_NETWORK: "ctf-challenges"
+      CONTAINER_MEM: "128m"
+      CONTAINER_CPU_QUOTA: "50000"
     volumes:
-      - pgadmin:/var/lib/pgadmin
-    restart: always
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - default
+      - ctf-challenges
+    expose:
+      - "8080"
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /opt/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - /opt/certs:/etc/nginx/certs:ro
     depends_on:
-      postgres:
-        condition: service_healthy
+      - webapp
+      - spawner
+    restart: unless-stopped
 
-volumes:
-  db:
-    driver: local
-  pgadmin:
-    driver: local
+networks:
+  default:
+    name: rtb-network
+  ctf-challenges:
+    name: ctf-challenges
+    driver: bridge
+    internal: true

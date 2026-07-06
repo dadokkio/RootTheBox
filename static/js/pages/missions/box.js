@@ -6,8 +6,33 @@ $(document).ready(function() {
     $(".markdown").each(function() {
         var parsed = reader.parse($(this).text());
         var formatted = writer.render(parsed).trim();
-        $(this).html(formatted.replaceAll("<a href=", '<a target="_blank" href='));
+        formatted = formatted.replaceAll("<a href=", '<a target="_blank" href=');
+        formatted = rtbRenderShortcodes(formatted);
+        $(this).html(formatted);
     });
+
+    /* Shortcode [spawn:challenge] → iframe verso lo spawner */
+    function rtbGetOrCreatePlayerId() {
+        var pid = localStorage.getItem('ctf_player_id');
+        if (pid && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(pid)) {
+            return pid;
+        }
+        pid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0;
+            return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+        });
+        localStorage.setItem('ctf_player_id', pid);
+        return pid;
+    }
+
+    function rtbRenderShortcodes(html) {
+        var pid = rtbGetOrCreatePlayerId();
+        return html.replace(/\[spawn:([a-z0-9_-]+)\]/g, function(match, challenge) {
+            return '<iframe src="/spawner/launch?challenge=' + challenge + '&pid=' + pid + '" '
+                 + 'style="width:100%;height:240px;border:none;border-radius:8px" '
+                 + 'loading="lazy"></iframe>';
+        });
+    }
 
     /* Flags */
     $("#capture-file-flag-modal").on('shown.bs.modal', function () {
